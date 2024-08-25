@@ -23,5 +23,5 @@ Install [CrewAI](https://docs.crewai.com/getting-started/Installing-CrewAI/).
 
 ```sh
 conda config --set pip_interop_enabled True
-pip install openai crewai crewai-tools
+pip install openai crewai crewai-tools pandas_ta
 ```

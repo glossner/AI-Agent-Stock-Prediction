@@ -3,17 +3,31 @@ import pandas as pd
 import json
 
 class IndicatorAgentSMA(IndicatorAgent):
-    def __init__(self, model="gpt-4o"):
+    def __init__(self, model="gpt-4"):
         super().__init__(model=model)  # Call the parent class's __init__ method
 
     def construct_message(self, data_list, **kwargs):
-        period = kwargs.get('period', 14)  # Default to 14 if not provided
-        return f"Calculate the SMA for this data: {json.dumps(data_list)}, with a period of {period}."
+        period = kwargs.get('period', 14)
+        return (
+            f"Given the following list of closing prices: {json.dumps(data_list)}, "
+            f"calculate the Simple Moving Average (SMA) with a period of {period}. "
+            f"Please return the result as a JSON array of SMA values."
+        )
 
     def calculate(self, data: pd.DataFrame, period=14) -> pd.Series:
         data_list = data['Close'].tolist()
-        sma_values = self.call_model(data_list, period=period)
-        return pd.Series(sma_values, index=data.index)
+        sma_values_json = self.call_model(data_list, period=period)
+
+        # Parse the JSON string into a list of floats
+        if sma_values_json:
+            try:
+                sma_values = json.loads(sma_values_json)
+                return pd.Series(sma_values, index=data.index[-len(sma_values):])
+            except json.JSONDecodeError as e:
+                print(f"Failed to parse JSON: {e}")
+                return pd.Series([None] * len(data))
+        else:
+            return pd.Series([None] * len(data))
 
     def respond(self, user_input):
         data = pd.DataFrame(user_input)
