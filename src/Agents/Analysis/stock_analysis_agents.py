@@ -12,9 +12,17 @@ from src.Agents.Analysis.Tools.sec_tools import SECTools
 
 from langchain.tools.yahoo_finance_news import YahooFinanceNewsTool
 
+from langchain.chat_models import ChatOpenAI
+gpt_model = ChatOpenAI(
+  temperature=0,
+  model_name="gpt-3.5-turbo",
+  #model_name="gpt-4o"
+)
+
 class StockAnalysisAgents():
   def financial_analyst(self):
     return Agent(
+      llm=gpt_model,
       role='The Best Financial Analyst',
       goal="""Impress all customers with your financial data 
       and market trends analysis""",
@@ -33,6 +41,7 @@ class StockAnalysisAgents():
 
   def research_analyst(self):
     return Agent(
+      llm=gpt_model,
       role='Staff Research Analyst',
       goal="""Being the best at gather, interpret data and amaze
       your customer with it""",
@@ -53,6 +62,7 @@ class StockAnalysisAgents():
 
   def investment_advisor(self):
     return Agent(
+      llm=gpt_model,
       role='Private Investment Advisor',
       goal="""Impress your customers with full analyses over stocks
       and completer investment recommendations""",

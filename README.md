@@ -62,3 +62,15 @@ Note: for Windows use set instead of export
 
 Sign up to get a [free SEC API Key](https://sec-api.io/)
 Sign up to get a [free SERPER API Key](https://serper.dev/)
+
+## Set up Selenium and the Chromium webdriver
+
+```sh
+pip install selenium
+```
+
+Download the [chromedriver](https://googlechromelabs.github.io/chrome-for-testing/#stable) from the stable channel.
+
+Place it is a folder named chromedriver in the root directory. This will not be on github because some students need Linux or MAC versions.
+
+Note that it must match the version of Chrome on your computer. You can check it by starting the Chrome browser. Then navigate to on your browser to the top right 3 dots, help->About Chrome. It should say 128.xxxxx.
