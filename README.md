@@ -2,6 +2,12 @@
 
 This code is from Rivier University's Fall 2024 Professional Seminar class (COMP-699)
 
+## Executing the Code
+
+```sh
+(stocks) jglossner@jglossner:~/GitRepos/AI-Agent-Stock-Prediction$ streamlit run src/UI/app.py
+```
+
 ## Installation
 
 Install [Anaconda Python](https://www.anaconda.com/download).
@@ -23,5 +29,5 @@ Install [CrewAI](https://docs.crewai.com/getting-started/Installing-CrewAI/).
 
 ```sh
 conda config --set pip_interop_enabled True
-pip install openai crewai crewai-tools pandas_ta
+pip install openai crewai crewai-tools pandas_ta unstructured sec_api
 ```

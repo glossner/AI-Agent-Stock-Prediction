@@ -1,9 +1,14 @@
-from src.Agents.Agent_Indicators.indicator_agent import IndicatorAgent
+from src.Agents.base_agent import BaseAgent
 import pandas as pd
 import json
 
-class IndicatorAgentSMA(IndicatorAgent):
-    def __init__(self, model="gpt-4"):
+
+class IndicatorAgentSMA(BaseAgent):
+    """
+        Note: This is for illustrative purposes only. Do not use it as a live agent.
+              It costs way too many tokens for Chat-GPT to return what is easily computed by pandas_ta
+    """
+    def __init__(self, model="gpt-3.5"):
         super().__init__(model=model)  # Call the parent class's __init__ method
 
     def construct_message(self, data_list, **kwargs):

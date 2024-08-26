@@ -3,8 +3,10 @@ import os
 import json
 import pandas as pd
 
-class IndicatorAgent:
-    def __init__(self, model="gpt-4"):
+
+# model="gpt-4o"
+class BaseAgent:
+    def __init__(self, model="gpt-3.5"):
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set")
