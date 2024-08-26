@@ -2,6 +2,11 @@
 # This code comes from: https://github.com/crewAIInc/crewAI-examples/blob/main/stock_analysis/main.py 
 # And is licensed under MIT
 ######################################
+#
+# The following keys must be defined in the environment shell
+# OPENAI_API_KEY=sk-
+# SEC_API_API_KEY=
+#
 import os
 import sys
 
@@ -10,8 +15,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from crewai import Crew
 from textwrap import dedent
 
-from Agents.Analysis.stock_analysis_agents import StockAnalysisAgents
-from Agents.Analysis.stock_analysis_tasks import StockAnalysisTasks
+from src.Agents.Analysis.stock_analysis_agents import StockAnalysisAgents
+from src.Agents.Analysis.stock_analysis_tasks import StockAnalysisTasks
 
 from dotenv import load_dotenv
 load_dotenv()

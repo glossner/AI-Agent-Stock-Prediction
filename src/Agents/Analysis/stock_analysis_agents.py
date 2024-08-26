@@ -5,10 +5,10 @@
 
 from crewai import Agent
 
-from Tools.browser_tools import BrowserTools
-from Tools.calculator_tools import CalculatorTools
-from Tools.search_tools import SearchTools
-from Tools.sec_tools import SECTools
+from src.Agents.Analysis.Tools.browser_tools import BrowserTools
+from src.Agents.Analysis.Tools.calculator_tools import CalculatorTools
+from src.Agents.Analysis.Tools.search_tools import SearchTools
+from src.Agents.Analysis.Tools.sec_tools import SECTools
 
 from langchain.tools.yahoo_finance_news import YahooFinanceNewsTool
 
