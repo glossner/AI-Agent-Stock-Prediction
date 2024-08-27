@@ -6,6 +6,7 @@
 # The following keys must be defined in the environment shell
 # OPENAI_API_KEY=sk-
 # SEC_API_API_KEY=
+# SERPER_API_KEY
 #
 import os
 import sys

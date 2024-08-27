@@ -10,13 +10,13 @@ from src.Agents.Analysis.Tools.calculator_tools import CalculatorTools
 from src.Agents.Analysis.Tools.search_tools import SearchTools
 from src.Agents.Analysis.Tools.sec_tools import SECTools
 
-from langchain.tools.yahoo_finance_news import YahooFinanceNewsTool
+from langchain_community.tools import YahooFinanceNewsTool
+from langchain_openai import ChatOpenAI
 
-from langchain.chat_models import ChatOpenAI
 gpt_model = ChatOpenAI(
   temperature=0,
-  model_name="gpt-3.5-turbo",
-  #model_name="gpt-4o"
+  #model_name="gpt-3.5-turbo",
+  model_name="gpt-4o"
 )
 
 class StockAnalysisAgents():
