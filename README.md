@@ -26,14 +26,16 @@ conda activate stocks
 Install yfinance.
 
 ```sh
-conda install langchain
-conda install -c conda-forge yfinance langchain
+conda install langchain langchain-community
+conda install -c conda-forge yfinance
 conda update --all
 ```
 
+## Install CrewAI
+
 If you are running on Windows, [download Visual Studio](https://visualstudio.microsoft.com/downloads/). You need a c++ compiler to generate the wheels for crewai. Minimally, [you must have buildtools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) installed. If you've already installed Visual Studio, you do not need to separately install build tools.
 
-Install [CrewAI](https://docs.crewai.com/getting-started/Installing-CrewAI/).
+Documentation for [CrewAI](https://docs.crewai.com/getting-started/Installing-CrewAI/).
 
 
 ```sh
@@ -44,24 +46,25 @@ pip install openai crewai crewai-tools pandas_ta unstructured sec_api
 ## Install faiss
 If you have an nVidia GPU
 ```sh
-pip install faiss-gpu
+conda install -c conda-forge faiss-gpu
 ```
 Else
 ```sh
-pip install faiss-cpu
+conda install -c conda-forge faiss-cpu
 ```
 
-
 ## Set Environment Variables
+
+Sign up to get an OpenAI Key
+Sign up to get a [free SEC API Key](https://sec-api.io/)
+Sign up to get a [free SERPER API Key](https://serper.dev/)
+
 ```sh
-export OPENAI_API_KEY=sk-     # This is supplied to you in the Canvas shell.
+export OPENAI_API_KEY=sk-     # available form platform.openai.com
 export SEC_API_API_KEY= your long list of numbers   # Sign up for a free key
 export SERPER_API_KEY= your key # Free for 2500 queries
 ```
 Note: for Windows use set instead of export
-
-Sign up to get a [free SEC API Key](https://sec-api.io/)
-Sign up to get a [free SERPER API Key](https://serper.dev/)
 
 ## Set up Selenium and the Chromium webdriver
 

@@ -21,6 +21,8 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import time
 
+import platform
+
 #FIXME: May want to change this to headless
 
 class BrowserTools:
@@ -43,7 +45,12 @@ class BrowserTools:
         chrome_options.add_argument("--log-level=3")  # Enable verbose logging
 
         # Initialize the Chrome WebDriver
-        service = Service('chromedriver/chromedriver.exe')  # Specify the path to your chromedriver
+        current_os = platform.system()
+        if current_os == "Windows":
+            service = Service('chromedriver/chromedriver.exe')  # Specify the path to your chromedriver
+        else:
+            service = Service('chromedriver/chromedriver')  # Specify the path to your chromedriver
+            
         driver = webdriver.Chrome(service=service, options=chrome_options)
 
         try:
