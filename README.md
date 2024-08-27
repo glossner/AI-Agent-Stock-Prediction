@@ -1,7 +1,5 @@
 # AI-Agent-Stock-Prediction
 
-This code is from Rivier University's Fall 2024 Professional Seminar class (COMP-699)
-
 ## Executing the Code
 
 There are two programs that are not yet integrated. From the root directory run:
@@ -23,7 +21,7 @@ conda create -n stocks python=3.12 anaconda
 conda activate stocks
 ```
 
-Install yfinance.
+## Install yfinance and langchain
 
 ```sh
 conda install langchain langchain-community
@@ -55,7 +53,7 @@ conda install -c conda-forge faiss-cpu
 
 ## Set Environment Variables
 
-Sign up to get an OpenAI Key
+Sign up to get an [OpenAI Key](https://platform.openai.com/docs/overview)
 Sign up to get a [free SEC API Key](https://sec-api.io/)
 Sign up to get a [free SERPER API Key](https://serper.dev/)
 
@@ -64,7 +62,7 @@ export OPENAI_API_KEY=sk-     # available form platform.openai.com
 export SEC_API_API_KEY= your long list of numbers   # Sign up for a free key
 export SERPER_API_KEY= your key # Free for 2500 queries
 ```
-Note: for Windows use set instead of export
+Note: for Windows use *set* instead of *export*
 
 ## Set up Selenium and the Chromium webdriver
 
