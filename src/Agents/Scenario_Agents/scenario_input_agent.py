@@ -20,7 +20,7 @@ class ScenarioInputAgent(BaseAgent):
             backstory='Handles market scenario inputs for financial simulations.',
             **kwargs)
  
-    # Subtask 1: Interpret natural language input
+    # 11.1 Subtask 1: Interpret natural language input
     def interpret_input(self, user_input):
         """
         Handles natural language inputs and interprets them into a structured format.
@@ -37,7 +37,7 @@ class ScenarioInputAgent(BaseAgent):
                 }
         return structured_data
 
-    # Subtask 2: Flexibility to handle various scenarios
+    # 11.1 Subtask 2: Flexibility to handle various scenarios
     def handle_flexible_scenarios(self, user_input):
         """
         Ensures flexibility in handling different types of market scenarios by identifying
@@ -51,7 +51,7 @@ class ScenarioInputAgent(BaseAgent):
 
         return structured_data
 
-    # Subtask 3: Validate the input
+    # 11.1 Subtask 3: Validate the input
     def validate_input(self, structured_data):
         """
         Validates the input to ensure the query is correct and meaningful.
@@ -65,7 +65,7 @@ class ScenarioInputAgent(BaseAgent):
 
         return True, "Valid scenario input."
 
-    # Subtask 4: Collaborate with Scenario Simulation Agent
+    # 11.1 Subtask 4: Collaborate with Scenario Simulation Agent
     def collaborate_with_simulation_agent(self, structured_data):
         """
         Passes structured data to the Scenario Simulation Agent for further processing.

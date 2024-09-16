@@ -4,14 +4,30 @@ import json
 import pandas as pd
 import src.globals as globals
 import crewai as crewai
+from pydantic import ConfigDict
+import logging
 
 
 class BaseAgent(crewai.Agent):
+    model_config = ConfigDict(extra='allow',arbitrary_types_allowed=True)
+
     def __init__(self, **kwargs):
+        # require role, goal, and backstory to be initialized
+        role = kwargs.pop('role', None)
+        goal = kwargs.pop('goal', None)
+        backstory = kwargs.pop('backstory', None)
+
+        if role is None:
+            raise ValueError("The 'role' parameter must be provided.")
+        if goal is None:
+            raise ValueError("The 'goal' parameter must be provided.")
+        if backstory is None:
+            raise ValueError("The 'backstory' parameter must be provided.")       
+
         super().__init__(
-            #role=kwargs.pop('role', None),
-            #goal=kwargs.pop('goal', None),
-            #backstory=kwargs.pop('backstory', None),
+            role=role,
+            goal=goal,
+            backstory=backstory,
             #tools=kwargs.get('tools', []),   #[my_tool1, my_tool2],  # Optional, defaults to an empty list
             llm=kwargs.pop('llm', globals.gpt_4o_llm),
             #function_calling_llm=my_llm,  # Optional
@@ -35,7 +51,16 @@ class BaseAgent(crewai.Agent):
             **kwargs
         )
 
-
+      # Initialize the logger
+        self.logger = logging.getLogger(self.__class__.__name__)
+        if not self.logger.handlers:
+            # Set up logging format and level if not already configured
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            self.logger.setLevel(logging.INFO)
+            
 
 # model="gpt-4o"
 # class BaseAgent:
