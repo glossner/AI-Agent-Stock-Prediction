@@ -38,10 +38,9 @@ class SearchTools():
     return '\n'.join(string)
 
   @tool("Search news on the internet")
-  def search_news(query):
+  def search_news(query, top_result_to_return=4):
     """Useful to search news about a company, stock or any other
     topic and return relevant results"""""
-    top_result_to_return = 4
     url = "https://google.serper.dev/news"
     payload = json.dumps({"q": query})
     headers = {

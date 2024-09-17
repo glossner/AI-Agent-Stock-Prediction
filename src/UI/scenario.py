@@ -1,104 +1,65 @@
 import sys
+import json
 import crewai as crewai
 import openai
 import crewai_tools as crewai_tools
-from pydantic import BaseModel, Field
-from src.Agents.base_agent import BaseAgent
-# from src.Agents.Analysis.Tools.search_tools import SearchTools
-import re
-
-class ScenarioInputAgent(BaseAgent):
-    # Define scenario_patterns as a class-level attribute using Field with a default_factory
-    scenario_patterns: dict = Field(default_factory=lambda: {
-        'interest_rate': re.compile(r'interest rates (rise|fall) by (\d+\.?\d*)%'),
-        'oil_price': re.compile(r'oil prices (increase|decrease) by (\d+\.?\d*)%'),
-        'stock_price': re.compile(r'stock prices (rise|fall) by (\d+\.?\d*)%'),
-        'inflation': re.compile(r'inflation (increases|decreases) by (\d+\.?\d*)%'),
-    })
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            role='Scenario Input Agent',
-            goal='Interpret and handle market scenarios',
-            backstory='Handles market scenario inputs for financial simulations.',
-            **kwargs)
- 
-    # Subtask 1: Interpret natural language input
-    def interpret_input(self, user_input):
-        """
-        Handles natural language inputs and interprets them into a structured format.
-        """
-        structured_data = {}
-
-        # Loop over scenario patterns and extract relevant data
-        for scenario, pattern in self.scenario_patterns.items():
-            match = pattern.search(user_input)
-            if match:
-                structured_data[scenario] = {
-                    'action': match.group(1),  # rise/fall/increase/decrease
-                    'value': float(match.group(2))  # percentage value
-                }
-        return structured_data
-
-    # Subtask 2: Flexibility to handle various scenarios
-    def handle_flexible_scenarios(self, user_input):
-        """
-        Ensures flexibility in handling different types of market scenarios by identifying
-        variables like interest rates, oil prices, or stock market fluctuations.
-        """
-        # Extract structured data from input
-        structured_data = self.interpret_input(user_input)
-
-        if not structured_data:
-            return "No valid market scenario detected. Please check your input."
-
-        return structured_data
-
-    # Subtask 3: Validate the input
-    def validate_input(self, structured_data):
-        """
-        Validates the input to ensure the query is correct and meaningful.
-        """
-        valid_scenarios = ['interest_rate', 'oil_price', 'stock_price', 'inflation']
-
-        # Check if the extracted data corresponds to known valid scenarios
-        for scenario in structured_data.keys():
-            if scenario not in valid_scenarios:
-                return False, f"Invalid scenario detected: {scenario}"
-
-        return True, "Valid scenario input."
-
-    # Subtask 4: Collaborate with Scenario Simulation Agent
-    def collaborate_with_simulation_agent(self, structured_data):
-        """
-        Passes structured data to the Scenario Simulation Agent for further processing.
-        """
-        # Simulating a call to the Scenario Simulation Agent
-        print("Passing the following data to the Scenario Simulation Agent:")
-        print(structured_data)
-        # In a real implementation, this would be where the Scenario Simulation Agent is invoked
-        return True
+from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
+from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
+#from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
+from textwrap import dedent
 
 
-# Example usage:
+
+
+
+class ScenarioCrew:
+  def __init__(self):
+      self.is_init = True
+
+  def run(self):
+    scenario_input_agent = ScenarioInputAgent()
+    portfolio_data_agent = PortfolioDataAgent()
+
+    crew = crewai.Crew(
+      agents=[
+        portfolio_data_agent,
+        scenario_input_agent       
+      ],
+      tasks=[
+        portfolio_data_agent.retrieve_portfolio_data(),
+        scenario_input_agent.get_scenarios_from_news()
+      ],
+      process=crewai.Process.sequential,
+      verbose=True
+    )
+
+    result = crew.kickoff()
+    return result
+
+
+    
+
 if __name__ == "__main__":
-    # Initialize the Scenario Input Agent
-    agent = ScenarioInputAgent()
-
-    # Example input
-    user_input = "What happens if interest rates rise by 1.5%?"
-
-    # Handle input and extract structured data
-    structured_data = agent.handle_flexible_scenarios(user_input)
+    print("## Scenario Analysis")
+    print('-------------------------------')
+  
+    scenario_crew = ScenarioCrew()
+    crew_output = scenario_crew.run()
     
-    # Validate the structured data
-    is_valid, message = agent.validate_input(structured_data)
-    
-    if is_valid:
-        # Collaborate with the Scenario Simulation Agent if valid
-        agent.collaborate_with_simulation_agent(structured_data)
-        print("Collaboraton complete")
-    else:
-        print(f"Validation failed: {message}")
+    # Accessing the crew output
+    print("\n\n########################")
+    print("## Here is the Report")
+    print("########################\n")
 
-    sys.exit(0)    
+    print(f"Raw Output: {crew_output.raw}")
+    if crew_output.json_dict:
+        print(f"\n\nJSON Output: {json.dumps(crew_output.json_dict, indent=2)}")
+    if crew_output.pydantic:
+        print(f"\n\nPydantic Output: {crew_output.pydantic}")
+    
+    print(f"\n\nTasks Output: {crew_output.tasks_output}")
+    print(f"\n\nToken Usage: {crew_output.token_usage}") 
+
+    print("Collaboraton complete")
+    sys.exit(0)  
+
