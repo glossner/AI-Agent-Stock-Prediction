@@ -109,3 +109,40 @@ class StockAnalysisTasks():
 
     def __tip_section(self):
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
+    def forecast_dividend_growth(self, agent, financial_data, company):
+        """
+        Task that uses the dividend forecasting agent to analyze financial data
+        and forecast dividend growth for the specified company.
+        """
+        income_statement = financial_data["IncomeStatement"]
+        cash_flow_statement = financial_data["CashFlowStatement"]
+
+        # Prepare a prompt for the agent based on the financial data
+        prompt = dedent(f"""
+        You are analyzing the financial data for {company}.
+
+        The following financial data is provided:
+
+        Income Statement:
+        {income_statement}
+
+        Cash Flow Statement:
+        {cash_flow_statement}
+
+        Based on {company}'s earnings, cash flow, and dividend payout history, 
+        forecast the potential dividend growth for the next 5 years. 
+        Please include a detailed explanation of your analysis and any 
+        potential risks or assumptions made in the forecast.
+        """)
+
+        # Return a task for CrewAI to process
+        return Task(
+            description=dedent(f"""
+                Analyze {company}'s income statement and cash flow statement 
+                to forecast dividend growth. Focus on earnings, cash flow, 
+                and past dividend payout history.
+            """),
+            agent=agent,
+            prompt=prompt,
+            expected_output=f"A detailed dividend growth forecast report for {company} for the next 5 years, including risks and assumptions."
+        )
