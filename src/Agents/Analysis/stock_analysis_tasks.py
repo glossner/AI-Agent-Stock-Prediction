@@ -111,6 +111,30 @@ class StockAnalysisTasks():
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
 
       
+    def fetch_news(self, stock_or_sector):
+        return f"Fetching the latest news related to {stock_or_sector}."
+
+    def analyze_sentiment(self, agent, news_data):
+        return Task(
+            description=dedent(f"""
+                Perform sentiment analysis on the latest financial news related to {news_data}.
+                Derive sentiment scores based on the emotional tone and market reaction.
+            """),
+            agent=agent,
+            expected_output="A sentiment score and analysis report on the specified stock or sector."
+        )
+
+    def provide_investment_advice(self, agent, sentiment_data):
+        return Task(
+            description=dedent(f"""
+                Based on the sentiment analysis for {sentiment_data}, provide actionable investment advice.
+                Formulate clear buy/hold/sell recommendations depending on the sentiment's market impact.
+            """),
+            agent=agent,
+            expected_output="Actionable investment advice based on the sentiment score."
+
+
+      
     def forecast_dividend_growth(self, agent, financial_data, company):
         """
         Task that uses the dividend forecasting agent to analyze financial data
@@ -165,5 +189,6 @@ class StockAnalysisTasks():
             """),
             agent=agent,
             expected_output="A detailed report on which sectors are expected to perform well, with a breakdown of the impact of macroeconomic indicators and government policies."
+
 
         )

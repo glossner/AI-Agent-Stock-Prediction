@@ -80,6 +80,21 @@ class StockAnalysisAgents():
       ]
     )
 
+  
+  def sentiment_analyst(self):
+        return Agent(
+            llm=gpt_model,
+            role='Sentiment Analyst',
+            goal="""Analyze market sentiments from news articles and derive actionable insights for investments.""",
+            backstory="""You're an expert in sentiment analysis, providing insights that help in determining market impact and investment decisions.""",
+            verbose=True,
+            tools=[
+                SearchTools.search_internet,
+                CalculatorTools.calculate
+            ]
+        )
+
+
   def dividend_forecasting_agent(self, company):
         return Agent(
             llm=gpt_model,
@@ -105,4 +120,5 @@ class StockAnalysisAgents():
             verbose=True,
             tools=[]
         )
+
 
