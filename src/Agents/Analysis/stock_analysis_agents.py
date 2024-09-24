@@ -79,3 +79,24 @@ class StockAnalysisAgents():
         YahooFinanceNewsTool()
       ]
     )
+  
+  def divergence_trading_advisor(self):
+        """
+        Returns an agent that interprets divergence signals and provides insights on potential market reversals.
+        """
+        return Agent(
+            llm=gpt_model,
+            role='Divergence Trading Advisor',
+            goal="""Analyze divergence signals detected in MACD and RSI and provide insights into 
+            potential reversals by analyzing historical data.""",
+            backstory="""As an expert in market analysis, this agent specializes in confirming divergence 
+            patterns to avoid false signals and improve trade accuracy.""",
+            verbose=True,
+            tools=[
+                BrowserTools.scrape_and_summarize_website,
+                SearchTools.search_internet,
+                CalculatorTools.calculate,
+                SECTools.search_10q,
+                SECTools.search_10k
+            ]
+        )

@@ -6,7 +6,7 @@
 
 from crewai import Task
 from textwrap import dedent
-
+from src.Indicators.detect_divergence import DivergenceDetector
 class StockAnalysisTasks():
     def research(self, agent, company):
         return Task(
@@ -109,3 +109,38 @@ class StockAnalysisTasks():
 
     def __tip_section(self):
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
+    
+    def detect_divergence(self, agent, price_data, indicator_data, indicator_name):
+        """
+        Detect potential divergence signals and create a task for ChatGPT analysis.
+
+        Args:
+            agent: The Divergence Trading Advisor agent.
+            price_data (pd.DataFrame): The stock price data.
+            indicator_data (pd.DataFrame): The indicator data (MACD/RSI).
+            indicator_name (str): Name of the indicator used for divergence detection.
+
+        Returns:
+            Task: A task for ChatGPT to analyze the divergence.
+        """
+        # Detect divergence using DivergenceDetector
+        detector = DivergenceDetector(price_data, indicator_data, indicator_name)
+        bullish_divergences = detector.detect_bullish_divergence()
+        bearish_divergences = detector.detect_bearish_divergence()
+
+        # Create message for ChatGPT analysis
+        market_context = "Bullish trend" if len(bullish_divergences) > len(bearish_divergences) else "Bearish trend"
+        description = dedent(f"""
+            Detected divergence in {indicator_name} on the following dates:
+            Bullish Divergences: {', '.join([str(d) for d in bullish_divergences])}
+            Bearish Divergences: {', '.join([str(d) for d in bearish_divergences])}
+
+            Market context: {market_context}.
+            Please analyze these divergence signals to confirm if they indicate a potential market reversal.
+        """)
+
+        return Task(
+            description=description,
+            agent=agent,
+            expected_output="A detailed analysis of the divergence signals with a recommendation."
+        )
