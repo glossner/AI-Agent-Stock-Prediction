@@ -109,6 +109,8 @@ class StockAnalysisTasks():
 
     def __tip_section(self):
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
+
+      
     def forecast_dividend_growth(self, agent, financial_data, company):
         """
         Task that uses the dividend forecasting agent to analyze financial data
@@ -145,4 +147,23 @@ class StockAnalysisTasks():
             agent=agent,
             prompt=prompt,
             expected_output=f"A detailed dividend growth forecast report for {company} for the next 5 years, including risks and assumptions."
+
+    def predict_sector_performance(self, agent, combined_data):
+        return Task(
+            description=dedent(f"""
+                Based on the provided macroeconomic data, financial reports, and recent government policy changes, 
+                analyze the information and predict which sectors are likely to perform well in the upcoming quarters.
+                
+                Your analysis should take into account macroeconomic factors such as GDP growth, inflation rates, and unemployment rates,
+                along with the effect of new government policies on different sectors of the economy.
+                
+                Ensure that your final report includes a detailed breakdown of your predictions and the reasoning behind your analysis.
+                
+                Financial Reports: {combined_data['FinancialReports']}
+                Policy Changes: {combined_data['PolicyChanges']}
+                Macroeconomic Data: {combined_data['MacroeconomicData']}
+            """),
+            agent=agent,
+            expected_output="A detailed report on which sectors are expected to perform well, with a breakdown of the impact of macroeconomic indicators and government policies."
+
         )
