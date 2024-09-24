@@ -106,7 +106,42 @@ class StockAnalysisTasks():
             agent=agent,
             expected_output="A comprehensive investment recommendation report, including a detailed analysis and clear investment stance, well-formatted for the customer."
         )
+    def fibonacci_analysis(self, agent, fibonacci_levels):
+        """
+        A new task to handle the Fibonacci retracement analysis by the financial analyst agent.
+        
+        Args:
+            agent (object): The agent responsible for analyzing the Fibonacci levels.
+            fibonacci_levels (dict): The calculated Fibonacci retracement levels.
+        
+        Returns:
+            Task: A CrewAI task for the agent to analyze the Fibonacci retracement report.
+        """
+        # Generate a descriptive report of the Fibonacci levels
+        report = "Fibonacci Analysis Report:\nRetracement Levels:\n"
+        for level, value in fibonacci_levels.items():
+            report += f"{level}: {value}\n"
 
+        # Create the task for the agent to analyze the Fibonacci report
+        return Task(
+            description=dedent(f"""
+                Analyze the following Fibonacci retracement levels for the selected stock.
+                Pay attention to potential support and resistance levels based on these Fibonacci levels.
+                Use these levels to assess the stock's future price movements.
+
+                The Fibonacci retracement levels are as follows:
+
+                {report}
+                
+                Your final answer MUST be a comprehensive analysis of these levels,
+                including potential price targets, support/resistance zones, and
+                any other important considerations.
+
+                Make sure to use the most recent stock data available.
+            """),
+            agent=agent,
+            expected_output="A comprehensive analysis of Fibonacci retracement levels, including price targets and potential support/resistance zones."
+        )
     def __tip_section(self):
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
 
