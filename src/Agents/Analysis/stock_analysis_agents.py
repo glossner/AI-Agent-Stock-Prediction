@@ -79,3 +79,14 @@ class StockAnalysisAgents():
         YahooFinanceNewsTool()
       ]
     )
+  def economic_forecasting_agent(self):
+        return Agent(
+            llm=gpt_model,
+            role='Economic Analyst',
+            goal="""Analyze macroeconomic indicators, government policy changes, and financial reports
+            to predict which sectors are likely to perform well in the coming quarters.""",
+            backstory="""You are an experienced economic analyst, adept at understanding the effects of macroeconomic factors
+            and policy changes on various sectors of the economy. You have access to the latest macroeconomic data and financial reports.""",
+            verbose=True,
+            tools=[]
+        )
