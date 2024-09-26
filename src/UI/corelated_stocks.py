@@ -1,6 +1,7 @@
 import os
 import sys
-from crewai import Crew
+import json
+import crewai as crewai
 from textwrap import dedent
 from dotenv import load_dotenv
 
@@ -35,9 +36,10 @@ class StockCorrelationCrew:
         #investment_task = tasks.investment_decision(investment_advisor_agent, self.stock1, self.stock2)
 
         # Use Crew to coordinate agents and tasks
-        crew = Crew(
+        crew = crewai.Crew(
             agents=[correlation_agent, investment_decision_agent],
             tasks=[correlation_task, investment_decision_task],
+            process=crewai.Process.sequential,
             verbose=True
         )
 
@@ -52,9 +54,21 @@ if __name__ == "__main__":
 
     # Initialize the correlation crew with the two stock tickers
     correlation_crew = StockCorrelationCrew(stock1, stock2)
-    result = correlation_crew.run()
+    crew_output = correlation_crew.run()
 
+   # Accessing the crew output
     print("\n\n########################")
-    print("## Investment Analysis Report ##")
+    print("## Here is the Report")
     print("########################\n")
-    print(result)
+
+    print(f"Raw Output: {crew_output.raw}")
+    if crew_output.json_dict:
+        print(f"\n\nJSON Output: {json.dumps(crew_output.json_dict, indent=2)}")
+    if crew_output.pydantic:
+        print(f"\n\nPydantic Output: {crew_output.pydantic}")
+    
+    print(f"\n\nTasks Output: {crew_output.tasks_output}")
+    print(f"\n\nToken Usage: {crew_output.token_usage}") 
+
+    print("Collaboraton complete")
+    sys.exit(0)  
