@@ -8,7 +8,7 @@ from src.Agents.Trend_Following_Agents.trend_following_agent import TrendFollowi
 from textwrap import dedent
 
 
-
+# Todo: Add next agent
 
 
 class TrendCrew:
