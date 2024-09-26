@@ -28,8 +28,14 @@ class CorrelationTool:
             
             # Calculate the correlation
             correlation = df[stock_1].corr(df[stock_2])
+
+            # string = []
+
+            # result = string.append('\n'.join([
+
+            # ]))
             
-            return f"The correlation between {stock_1} and {stock_2} is: {correlation:.4f}"
+            return [f"The correlation between {stock_1} and {stock_2} is: {correlation:.4f}"]
         
         except Exception as e:
             return f"An error occurred while calculating correlation: {str(e)}"
