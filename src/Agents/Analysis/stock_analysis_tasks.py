@@ -167,7 +167,7 @@ class StockAnalysisTasks():
             """),
             agent=agent,
             expected_output="Actionable investment advice based on the sentiment score."
-
+        )
 
       
     def forecast_dividend_growth(self, agent, financial_data, company):
@@ -205,7 +205,7 @@ class StockAnalysisTasks():
             """),
             agent=agent,
             prompt=prompt,
-            expected_output=f"A detailed dividend growth forecast report for {company} for the next 5 years, including risks and assumptions."
+            expected_output=f"A detailed dividend growth forecast report for {company} for the next 5 years, including risks and assumptions.")
 
     def predict_sector_performance(self, agent, combined_data):
         return Task(
