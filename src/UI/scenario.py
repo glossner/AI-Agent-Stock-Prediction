@@ -6,6 +6,7 @@ import crewai_tools as crewai_tools
 from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
 from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
 #from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
+from src.Helpers.pretty_print_crewai_output import display_crew_output
 from textwrap import dedent
 
 
@@ -51,14 +52,7 @@ if __name__ == "__main__":
     print("## Here is the Report")
     print("########################\n")
 
-    print(f"Raw Output: {crew_output.raw}")
-    if crew_output.json_dict:
-        print(f"\n\nJSON Output: {json.dumps(crew_output.json_dict, indent=2)}")
-    if crew_output.pydantic:
-        print(f"\n\nPydantic Output: {crew_output.pydantic}")
-    
-    print(f"\n\nTasks Output: {crew_output.tasks_output}")
-    print(f"\n\nToken Usage: {crew_output.token_usage}") 
+    display_crew_output(crew_output)
 
     print("Collaboraton complete")
     sys.exit(0)  
