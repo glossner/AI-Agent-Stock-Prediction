@@ -75,3 +75,10 @@ Download the [chromedriver](https://googlechromelabs.github.io/chrome-for-testin
 Place it is a folder named chromedriver in the root directory. This will not be on github because some students need Linux or MAC versions.
 
 Note that it must match the version of Chrome on your computer. You can check it by starting the Chrome browser. Then navigate to on your browser to the top right 3 dots, help->About Chrome. It should say 128.xxxxx.
+
+## Set up back testing 
+
+```sh
+pip install backtrader
+pip install backtrader[plotting]
+```
