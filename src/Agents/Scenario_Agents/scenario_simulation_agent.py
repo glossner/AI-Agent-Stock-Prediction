@@ -9,8 +9,8 @@ class ScenarioSimulationAgent(BaseAgent):
     def __init__(self, **kwargs):
         super().__init__(
             role='Scenario Simulation Agent',
-            goal='Simulate market scenarios on portfolio data',
-            backstory='Simulates the impact of market scenarios on the portfolio.',
+            goal="Simulate the likely range of impacts on the portfolio data",
+            backstory='Simulates the impact of market scenarios on the portfolio. This can include natural disasters like hurricanes or floods, terrorist attacks, to financial impacts due to GDP or inflation',
             **kwargs)
         self._scenario_data = None
         self._portfolio_data = None
