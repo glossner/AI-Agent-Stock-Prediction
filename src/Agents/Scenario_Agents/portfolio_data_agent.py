@@ -1,7 +1,7 @@
 from src.Agents.base_agent import BaseAgent
 from pydantic import BaseModel, Field, PrivateAttr
 from cryptography.fernet import Fernet, InvalidToken
-from typing import Dict
+from typing import Dict, List, Optional
 from textwrap import dedent
 import json
 import crewai as crewai
@@ -10,19 +10,31 @@ import base64
 import logging
 
 
+# Optional: Define Pydantic models for better data validation
+class Holding(BaseModel):
+    ticker: str
+    position: float
+    weight: float
+
+
+class Asset(BaseModel):
+    asset_class: str
+    holdings: List[Holding] = Field(default_factory=list)
+
+
 class PortfolioDataAgent(BaseAgent):
     # Class variables
     encrypted_portfolio_data: bytes = None
-    decrypted_portfolio_data: dict = None
-    mapped_portfolio_data: dict = None
+    decrypted_portfolio_data: Dict = None
+    mapped_portfolio_data: Dict = None
 
     _fernet: Fernet = PrivateAttr()
 
     def __init__(
         self,
-        portfolio_data=None,
-        encrypted_file_path="./portfolio_encrypted",
-        key_file_path="./portfolio_key",
+        portfolio_data: Optional[List[Dict]] = None,
+        encrypted_file_path: str = "./portfolio_encrypted",
+        key_file_path: str = "./portfolio_key",
         **kwargs
     ):
         super().__init__(
@@ -64,15 +76,35 @@ class PortfolioDataAgent(BaseAgent):
 
         # Initialize portfolio data
         if portfolio_data:
-            self.portfolio_data = portfolio_data
-        else:  # default portfolio
-            self.portfolio_data = {
-                'assets': [
-                    {'asset_class': 'Equity', 'position': 100000, 'weight': 0.5},
-                    {'asset_class': 'Fixed Income', 'position': 50000, 'weight': 0.25},
-                    {'asset_class': 'Commodities', 'position': 50000, 'weight': 0.25},
-                ]
-            }
+            # Validate using Pydantic models if provided
+            try:
+                assets = [Asset(**asset) for asset in portfolio_data]
+                self.portfolio_data = [asset.dict() for asset in assets]
+            except Exception as e:
+                self.logger.error(f"Invalid portfolio data provided: {e}")
+                raise ValueError("Invalid portfolio data structure.")
+        else:  # default portfolio with specific tickers
+            self.portfolio_data = [
+                {
+                    'asset_class': 'Equity',
+                    'holdings': [
+                        {'ticker': 'SPY', 'position': 60000, 'weight': 0.3},
+                        {'ticker': 'DIA', 'position': 40000, 'weight': 0.2},
+                    ]
+                },
+                {
+                    'asset_class': 'Fixed Income',
+                    'holdings': [
+                        {'ticker': 'AGG', 'position': 50000, 'weight': 0.25}
+                    ]
+                },
+                {
+                    'asset_class': 'Commodities',
+                    'holdings': [
+                        {'ticker': 'GLD', 'position': 50000, 'weight': 0.25}
+                    ]
+                },
+            ]
 
     def _save_encryption_key(self, key: bytes):
         try:
@@ -148,14 +180,26 @@ class PortfolioDataAgent(BaseAgent):
             self.logger.error("No decrypted portfolio data to map.")
             return None
         mapped_data = {}
-        for asset in self.decrypted_portfolio_data['assets']:
+        for asset in self.decrypted_portfolio_data:
             asset_class = asset['asset_class']
-            if asset_class not in mapped_data:
-                mapped_data[asset_class] = {'total_position': 0, 'total_weight': 0}
-            mapped_data[asset_class]['total_position'] += asset['position']
-            mapped_data[asset_class]['total_weight'] += asset['weight']
+            for holding in asset['holdings']:
+                ticker = holding['ticker']
+                position = holding['position']
+                weight = holding['weight']
+                if asset_class not in mapped_data:
+                    mapped_data[asset_class] = {
+                        'total_position': 0,
+                        'total_weight': 0,
+                        'tickers': {}
+                    }
+                mapped_data[asset_class]['total_position'] += position
+                mapped_data[asset_class]['total_weight'] += weight
+                mapped_data[asset_class]['tickers'][ticker] = {
+                    'position': position,
+                    'weight': weight
+                }
         self.mapped_portfolio_data = mapped_data
-        self.logger.info("Portfolio data has been mapped to asset categories.")
+        self.logger.info("Portfolio data has been mapped to asset categories with specific tickers.")
         return mapped_data
 
     def validate_mapped_data(self) -> bool:
