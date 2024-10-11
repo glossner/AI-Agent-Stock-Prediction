@@ -16,9 +16,17 @@ from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulat
 from src.Helpers.pretty_print_crewai_output import display_crew_output
 from textwrap import dedent
 from dotenv import load_dotenv
+import logging
 
-# Load environment variables from .env file
-load_dotenv()
+# Initialize logger if not already present
+
+logger = logging.getLogger(__name__)
+if not logger.hasHandlers():
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 
 class ScenarioCrew:
@@ -53,7 +61,11 @@ if __name__ == "__main__":
     print('-------------------------------')
   
     scenario_crew = ScenarioCrew()
+    logging.info("scenario crew initialized successfully")
+
+
     crew_output = scenario_crew.run()
+    logging.info("scenario crew execution run() successfully")
     
     # Accessing the crew output
     print("\n\n########################")

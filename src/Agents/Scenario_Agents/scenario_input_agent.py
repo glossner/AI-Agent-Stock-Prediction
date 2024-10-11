@@ -28,7 +28,7 @@ class ScenarioInputAgent(BaseAgent):
             description=dedent(f"""
                 Collect and summarize recent news articles, press
                 releases, and market analyses related to events that
-                could affect the stock market in general.
+                could affect tickers in the portfolio.
                                
                 Pay special attention to any inflation, interest rate,
                 and large movements in the stock market.
