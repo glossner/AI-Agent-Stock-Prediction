@@ -15,6 +15,10 @@ from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
 from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
 from src.Helpers.pretty_print_crewai_output import display_crew_output
 from textwrap import dedent
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 class ScenarioCrew:
