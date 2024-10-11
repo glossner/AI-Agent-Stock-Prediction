@@ -1,3 +1,10 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
+for key, value in os.environ.items():
+    print(f"{key}: {value}")
+
+
 import sys
 import json
 import crewai as crewai
@@ -5,7 +12,7 @@ import openai
 import crewai_tools as crewai_tools
 from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
 from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
-#from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
+from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
 from src.Helpers.pretty_print_crewai_output import display_crew_output
 from textwrap import dedent
 from dotenv import load_dotenv

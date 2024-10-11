@@ -162,5 +162,4 @@ cython_debug/
 #.idea/
 chromedriver/chromedriver.exe
 chromedriver/chromedriver
-key
-portfolio_encrypted
+portfolio_key
