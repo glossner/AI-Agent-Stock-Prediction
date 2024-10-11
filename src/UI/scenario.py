@@ -10,8 +10,9 @@ import json
 import crewai as crewai
 import openai
 import crewai_tools as crewai_tools
-from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
 from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
+from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
+from src.Agents.Scenario_Agents.scenario_input_critic_agent import ScenarioInputCriticAgent
 from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
 from src.Helpers.pretty_print_crewai_output import display_crew_output
 from textwrap import dedent
@@ -34,17 +35,21 @@ class ScenarioCrew:
       self.is_init = True
 
   def run(self):
-    scenario_input_agent = ScenarioInputAgent()
     portfolio_data_agent = PortfolioDataAgent()
+    scenario_input_agent = ScenarioInputAgent()
+    scenario_input_critic_agent = ScenarioInputCriticAgent()
+    
 
     crew = crewai.Crew(
       agents=[
         portfolio_data_agent,
-        scenario_input_agent       
+        scenario_input_agent,
+        scenario_input_critic_agent
       ],
       tasks=[
         portfolio_data_agent.retrieve_portfolio_data(),
-        scenario_input_agent.get_scenarios_from_news()
+        scenario_input_agent.get_scenarios_from_news(),
+        scenario_input_critic_agent.critique_scenario_input_agent()
       ],
       process=crewai.Process.sequential,
       verbose=True
