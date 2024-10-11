@@ -51,6 +51,11 @@ Else
 conda install -c conda-forge faiss-cpu
 ```
 
+## newspaper3k and supporting libraries
+```sh
+pip install newspaper3k beautifulsoup4 lxml lxml_html_clean
+```
+
 ## Set Environment Variables
 
 Sign up to get an [OpenAI Key](https://platform.openai.com/docs/overview)
