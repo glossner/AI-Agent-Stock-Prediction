@@ -56,7 +56,7 @@ class PortfolioDataAgent(BaseAgent):
         env_key = os.getenv("PORTFOLIO_ENCRYPTION_KEY")
         if env_key:
             try:
-                # Decode the base64-encoded key from the environment variable
+                # Ensure the key is bytes
                 self.encryption_key = env_key.encode('utf-8')
                 # Validate the key by attempting to create a Fernet instance
                 Fernet(self.encryption_key)
@@ -138,7 +138,7 @@ class PortfolioDataAgent(BaseAgent):
         '''
         # if there isn't a portfolio yet, encrypt it and write it to disk (initialize)
         if not os.path.exists(self.encrypted_file_path):
-            self.encrypt_and_save_portfolio_data()
+            self._encrypt_and_save_portfolio_data()
 
         # Read and decrypt portfolio data
         self.read_and_decrypt_portfolio_data()
@@ -206,7 +206,8 @@ class PortfolioDataAgent(BaseAgent):
         if not self.mapped_portfolio_data:
             self.logger.error("No mapped portfolio data to validate.")
             return False
-        total_weight = sum(data['weight'] for data in self.mapped_portfolio_data.values())
+        # Corrected: Use 'total_weight' instead of 'weight'
+        total_weight = sum(data['total_weight'] for data in self.mapped_portfolio_data.values())
         if abs(total_weight - 1.0) > 0.01:
             self.logger.error(f"Validation failed: Total weights sum to {total_weight}, which is not approximately 1.")
             return False
@@ -226,7 +227,7 @@ class PortfolioDataAgent(BaseAgent):
             encrypted_data = self._fernet.encrypt(data_str)
             # Save encrypted data to file
             with open(self.encrypted_file_path, 'wb') as f:
-                f.write(self.encrypted_portfolio_data)
+                f.write(encrypted_data)  # Corrected: Write 'encrypted_data' instead of 'self.encrypted_portfolio_data'
             self.logger.info("Portfolio data has been encrypted and saved to disk.")
         except Exception as e:
             self.logger.error(f"Failed to encrypt and save portfolio data: {e}")
