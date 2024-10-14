@@ -8,7 +8,7 @@ for key, value in os.environ.items():
 import sys
 import json
 import crewai as crewai
-import openai
+import langchain_openai as lang_oai
 import crewai_tools as crewai_tools
 from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
 from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
@@ -27,17 +27,22 @@ if not logger.hasHandlers():
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
+gpt_4o_high_tokens = lang_oai.ChatOpenAI(
+    model_name="gpt-4o",
+    temperature=0.0,
+    max_tokens=1500
+)
 
 class ScenarioCrew:
   def __init__(self):
       self.is_init = True
 
   def run(self):
-    portfolio_data_agent = PortfolioDataAgent()
-    scenario_input_agent = ScenarioInputAgent()
-    scenario_input_critic_agent = ScenarioInputCriticAgent()
+    portfolio_data_agent = PortfolioDataAgent(llm=gpt_4o_high_tokens)
+    scenario_input_agent = ScenarioInputAgent(llm=gpt_4o_high_tokens)
+    scenario_input_critic_agent = ScenarioInputCriticAgent(llm=gpt_4o_high_tokens)
     
 
     crew = crewai.Crew(
@@ -64,14 +69,16 @@ class ScenarioCrew:
 if __name__ == "__main__":
     print("## Scenario Analysis")
     print('-------------------------------')
-  
-    scenario_crew = ScenarioCrew()
-    logging.info("scenario crew initialized successfully")
 
+    try:
+        scenario_crew = ScenarioCrew()
+        logging.info("scenario crew initialized successfully")
+        crew_output = scenario_crew.run()
+        logging.info("Scenario crew execution run() successfully")
+    except Exception as e:
+        logging.error(f"Error during crew execution: {e}")
+        sys.exit(1)  
 
-    crew_output = scenario_crew.run()
-    logging.info("scenario crew execution run() successfully")
-    
     # Accessing the crew output
     print("\n\n########################")
     print("## Here is the Report")
