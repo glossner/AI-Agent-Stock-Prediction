@@ -51,6 +51,12 @@ class PortfolioDataAgent(BaseAgent):
         # Initialize logger if not already present
         if not hasattr(self, 'logger'):
             self.logger = logging.getLogger(__name__)
+            if not self.logger.hasHandlers():
+                handler = logging.StreamHandler()
+                formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+                handler.setFormatter(formatter)
+                self.logger.addHandler(handler)
+                self.logger.setLevel(logging.WARNING)
 
         # Retrieve encryption key from environment variable or file
         env_key = os.getenv("PORTFOLIO_ENCRYPTION_KEY")
@@ -129,6 +135,7 @@ class PortfolioDataAgent(BaseAgent):
             self.logger.error(f"Failed to load encryption key: {e}")
             raise e
 
+    #### CrewAI.Task()
     def retrieve_portfolio_data(self):
         '''
             See if a portfolio exists on disk.
@@ -143,7 +150,11 @@ class PortfolioDataAgent(BaseAgent):
         # Read and decrypt portfolio data
         self.read_and_decrypt_portfolio_data()
         self.map_portfolio_data()
-        self.validate_mapped_data()
+        is_valid = self.validate_mapped_data()
+        if is_valid:
+            # Log the mapped portfolio data in a pretty format
+            pretty_data = json.dumps(self.mapped_portfolio_data, indent=4)
+            self.logger.info("Mapped Portfolio Data:\n%s", pretty_data)
 
         return crewai.Task(
             description=dedent("""
@@ -227,7 +238,7 @@ class PortfolioDataAgent(BaseAgent):
             encrypted_data = self._fernet.encrypt(data_str)
             # Save encrypted data to file
             with open(self.encrypted_file_path, 'wb') as f:
-                f.write(encrypted_data)  # Corrected: Write 'encrypted_data' instead of 'self.encrypted_portfolio_data'
+                f.write(encrypted_data)  
             self.logger.info("Portfolio data has been encrypted and saved to disk.")
         except Exception as e:
             self.logger.error(f"Failed to encrypt and save portfolio data: {e}")
