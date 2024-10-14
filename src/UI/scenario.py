@@ -12,6 +12,7 @@ import crewai_tools as crewai_tools
 from src.Agents.Scenario_Agents.portfolio_data_agent import PortfolioDataAgent
 from src.Agents.Scenario_Agents.scenario_input_agent import ScenarioInputAgent
 from src.Agents.Scenario_Agents.scenario_input_critic_agent import ScenarioInputCriticAgent
+from src.Agents.Scenario_Agents.scenario_simulation_agent import ScenarioSimulationAgent
 from src.Helpers.pretty_print_crewai_output import display_crew_output
 
 # Initialize logger
@@ -37,17 +38,20 @@ class ScenarioCrew:
     portfolio_data_agent = PortfolioDataAgent(llm=gpt_4o_high_tokens)
     scenario_input_agent = ScenarioInputAgent(llm=gpt_4o_high_tokens)
     scenario_input_critic_agent = ScenarioInputCriticAgent(llm=gpt_4o_high_tokens)
+    scenario_simulation_agent = ScenarioSimulationAgent(llm=gpt_4o_high_tokens)
     
 
     agents = [ portfolio_data_agent,
                    scenario_input_agent,
-                   scenario_input_critic_agent
+                   scenario_input_critic_agent,
+                   scenario_simulation_agent
             ]
 
     tasks = [ portfolio_data_agent.retrieve_portfolio_data(),
               scenario_input_agent.get_scenarios_from_news(),
               scenario_input_critic_agent.critique_scenario_input_agent(),
-              scenario_input_agent.revise_report()
+              scenario_input_agent.revise_report(),
+              scenario_simulation_agent.run_simulation()
             ]
     
 
