@@ -74,8 +74,9 @@ class ScenarioInputCriticAgent(BaseAgent):
         # Return the task
         return crewai.Task(
             description=dedent("""
-                Analyze the Scenario Input Agent's output. Critique it and if appropriate
-                direct the Scenario Input Agent to write a better report.
+                Analyze the Scenario Input Agent's output. 
+                Provide a detailed critique, highlighting specific areas for improvement, 
+                and offer actionable suggestions to enhance the report.
             """),
             agent=self,
             expected_output="A critique of the Scenario Input Agent's report",

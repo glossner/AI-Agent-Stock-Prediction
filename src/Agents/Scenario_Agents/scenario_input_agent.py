@@ -13,10 +13,12 @@ class ScenarioInputAgent(BaseAgent):
     def __init__(self, **kwargs):
         super().__init__(
             role='Scenario Input Agent',
-            goal='Find and interpret market scenarios',
-            backstory='Find and interpret market scenarios',
+            goal="Provide comprehensive market scenarios affecting portfolio tickers",
+            backstory='An expert in market analysis and reporting',
             tools=[SearchTools.search_news],
             **kwargs)
+        
+        self.previous_report = None
 
     def get_scenarios_from_news(self):
         if os.name == 'nt':  # For Windows
@@ -40,6 +42,36 @@ class ScenarioInputAgent(BaseAgent):
           
             """),
             agent=self,
-            expected_output="A comprehensive report summarizing the latest news, market sentiments, and potential best case and worst case impacts on the stock market."
+            expected_output="A comprehensive report on recent market scenarios"
+        )
+    
+    def revise_report(self):       
+        # Define the revision task logic
+        def task_logic():
+            # Prepare the prompt for the agent
+            prompt = dedent(f"""
+                As the Scenario Input Agent, you are tasked with revising your previous market scenarios report based on the critique provided by the Scenario Input Critic Agent.
+                
+                **Instructions:**
+
+                - Carefully read the critique and identify all the points that need to be addressed.
+                - Revise your report to incorporate the feedback, ensuring that all suggestions are implemented.
+                - Enhance the level of detail, analysis, and clarity in your report.
+                - Focus on providing comprehensive market scenarios affecting SPY, DIA, and AGG.
+                - Ensure that the report is well-structured, accurate, and insightful.
+
+                Please provide the revised report below without including these instructions or any meta-commentary.
+            """)
+            # Return the prompt for the agent to process
+            return prompt
+
+        return crewai.Task(
+            description=dedent("""
+                Revise your previous market scenarios report based on the critique provided by the Scenario Input Critic Agent.
+                Ensure that all feedback is addressed, and the report is enhanced accordingly.
+            """),
+            agent=self,
+            expected_output="An improved market scenarios report",
+            action=task_logic  
         )
 
