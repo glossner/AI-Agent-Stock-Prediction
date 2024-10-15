@@ -99,5 +99,69 @@ class TestDividendForecasting(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.tasks.forecast_dividend_growth(self.mock_agent, financial_data, self.company)
 
+class TestDividendGrowthIntegration(unittest.TestCase):
+
+    def setUp(self):
+        self.company = "TestCompany"
+
+    @patch('src.UI.dividend_forecast_main.FinancialCrew.fetch_financial_data')
+    def test_forecast_accuracy_with_combined_financial_data(self, mock_fetch_financial_data):
+        # Mock financial data with realistic values
+        mock_financial_data = {
+            "IncomeStatement": "Net Income: 2000000, Revenue: 8000000, Dividend: 50000",
+            "CashFlowStatement": "Operating Cash Flow: 2500000, Free Cash Flow: 1500000"
+        }
+        mock_fetch_financial_data.return_value = mock_financial_data
+
+        crew = FinancialCrew(self.company)
+        result = crew.run()
+
+        # Check if the output contains the forecast report
+        self.assertIn("Dividend Forecasting Report", result)
+
+    @patch('src.UI.dividend_forecast_main.FinancialCrew.fetch_financial_data')
+    def test_long_term_forecast_accuracy_with_financial_ratios(self, mock_fetch_financial_data):
+        # Mock financial data over multiple years
+        mock_financial_data = {
+            "IncomeStatement": "Net Income over 5 years: [2000000, 2200000, 2400000, 2600000, 2800000]",
+            "CashFlowStatement": "Operating Cash Flow over 5 years: [2500000, 2700000, 2900000, 3100000, 3300000]"
+        }
+        mock_fetch_financial_data.return_value = mock_financial_data
+
+        crew = FinancialCrew(self.company)
+        result = crew.run()
+
+        # Validate that the long-term forecast is generated
+        self.assertIn("Dividend Forecasting Report", result)
+
+    @patch('src.UI.dividend_forecast_main.FinancialCrew.fetch_financial_data')
+    def test_integration_with_multiple_companies(self, mock_fetch_financial_data):
+        # Test the system with multiple companies
+        companies = ['CompanyA', 'CompanyB', 'CompanyC']
+        mock_financial_data = {
+            "IncomeStatement": "Net Income: 1500000, Revenue: 7000000, Dividend: 40000",
+            "CashFlowStatement": "Operating Cash Flow: 1800000, Free Cash Flow: 1100000"
+        }
+        mock_fetch_financial_data.return_value = mock_financial_data
+
+        for company in companies:
+            crew = FinancialCrew(company)
+            result = crew.run()
+            self.assertIn("Dividend Forecasting Report", result)
+
+    @patch('src.UI.dividend_forecast_main.FinancialCrew.fetch_financial_data')
+    def test_edge_case_handling_for_missing_data(self, mock_fetch_financial_data):
+        # Mock missing financial data
+        mock_financial_data = {
+            "IncomeStatement": "",
+            "CashFlowStatement": ""
+        }
+        mock_fetch_financial_data.return_value = mock_financial_data
+
+        crew = FinancialCrew(self.company)
+        # Expecting an exception due to missing data
+        with self.assertRaises(Exception):
+            crew.run()
+
 if __name__ == '__main__':
     unittest.main()
