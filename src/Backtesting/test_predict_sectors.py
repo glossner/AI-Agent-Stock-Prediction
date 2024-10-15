@@ -41,6 +41,25 @@ class TestEconomicCrew(unittest.TestCase):
         self.assertEqual(result["FinancialReports"], "Financial Reports Mock Data")
         self.assertEqual(result["PolicyChanges"], "Policy Changes Mock Data")
 
+    @patch('src.Agents.Analysis.stock_analysis_agents.Agent')
+    def test_economic_forecasting_agent(self, mock_agent):
+        # Ensure economic forecasting agent is initialized correctly
+        agents = StockAnalysisAgents()
+        agent = agents.economic_forecasting_agent()
+        self.assertTrue(mock_agent.called)
+        self.assertEqual(agent.role, 'Economic Analyst')
+
+    @patch('src.Agents.Analysis.stock_analysis_tasks.Task')
+    def test_predict_sector_performance_task(self, mock_task):
+        # Mocking Task creation for sector performance prediction
+        tasks = StockAnalysisTasks()
+        agent = StockAnalysisAgents().economic_forecasting_agent()
+        task = tasks.predict_sector_performance(agent, mock_combined_data)
+
+        # Check if the Task description is correctly generated
+        self.assertTrue(mock_task.called)
+        self.assertIn("predict which sectors", task.description)
+        self.assertEqual(task.agent, agent)
 
 if __name__ == '__main__':
     unittest.main()
