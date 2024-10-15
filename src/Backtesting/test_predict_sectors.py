@@ -118,6 +118,18 @@ class TestIntegrationEconomicForecasting(unittest.TestCase):
         # Validate output with the alternative policy changes
         self.assertIn("Policy Z", str(result))
 
-        
+    @patch('src.UI.predict_sectors_main.EconomicCrew.get_combined_data')
+    def test_sector_performance_with_unexpected_economic_conditions(self, mock_get_combined_data):
+        # Introduce an unexpected economic condition
+        mock_combined_data['MacroeconomicData']['GDP'] = "Unexpected GDP Decline"
+        mock_get_combined_data.return_value = mock_combined_data
+
+        # Run the crew with the unexpected macroeconomic conditions
+        economic_crew = EconomicCrew()
+        result = economic_crew.run()
+
+        # Validate output with the unexpected economic condition
+        self.assertIn("Unexpected GDP Decline", str(result))
+
 if __name__ == '__main__':
     unittest.main()
