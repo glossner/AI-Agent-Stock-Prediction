@@ -79,6 +79,15 @@ class TestEconomicCrew(unittest.TestCase):
 
         # Check if the economic forecasting agent was called
         self.assertTrue(mock_forecasting_agent.called)
-        
+
+    @patch('src.Agents.Analysis.stock_analysis_agents.StockAnalysisAgents.economic_forecasting_agent')
+    def test_economic_forecasting_agent_initialization(self, mock_forecasting_agent):
+        # Ensure that the agent is initialized with the correct parameters
+        economic_crew = EconomicCrew()
+        economic_crew.run()
+
+        # Check agent initialization
+        self.assertTrue(mock_forecasting_agent.called)
+
 if __name__ == '__main__':
     unittest.main()
