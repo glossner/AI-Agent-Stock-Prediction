@@ -61,5 +61,24 @@ class TestEconomicCrew(unittest.TestCase):
         self.assertIn("predict which sectors", task.description)
         self.assertEqual(task.agent, agent)
 
+    @patch('src.UI.predict_sectors_main.EconomicCrew.fetch_macroeconomic_data')
+    def test_fetch_macroeconomic_data_error(self, mock_fetch_data):
+        # Simulate API error
+        mock_fetch_data.side_effect = Exception("FRED API error")
+
+        economic_crew = EconomicCrew()
+
+        with self.assertRaises(Exception):
+            economic_crew.fetch_macroeconomic_data()
+
+    @patch('src.Agents.Analysis.stock_analysis_agents.StockAnalysisAgents.economic_forecasting_agent')
+    def test_economic_crew_agents(self, mock_forecasting_agent):
+        # Ensure agents are correctly initialized
+        economic_crew = EconomicCrew()
+        agents = economic_crew.run()
+
+        # Check if the economic forecasting agent was called
+        self.assertTrue(mock_forecasting_agent.called)
+        
 if __name__ == '__main__':
     unittest.main()
