@@ -48,5 +48,30 @@ class TestFibonacciRetracement(unittest.TestCase):
         with self.assertRaises(ValueError):
             fib.calculate_levels()
 
+    def test_pattern_with_noise(self):
+        data = pd.DataFrame({'High': [120, 130, 140, 125], 'Low': [100, 110, 115, 105]})
+        fib = FibonacciRetracement(data)
+        levels = fib.calculate_levels()
+        self.assertIn('50%', levels)
+
+    def test_sparse_data(self):
+        data = pd.DataFrame({'High': [120], 'Low': [100]})
+        fib = FibonacciRetracement(data)
+        levels = fib.calculate_levels()
+        self.assertEqual(len(levels), 6)
+
+    def test_large_data_set(self):
+        data = pd.DataFrame({'High': [120] * 1000, 'Low': [100] * 1000})
+        fib = FibonacciRetracement(data)
+        levels = fib.calculate_levels()
+        self.assertEqual(len(levels), 6)
+
+    def test_empty_data(self):
+        data = pd.DataFrame(columns=['High', 'Low'])
+        fib = FibonacciRetracement(data)
+        with self.assertRaises(ValueError):
+            fib.calculate_levels()
+
+
 if __name__ == '__main__':
     unittest.main()
