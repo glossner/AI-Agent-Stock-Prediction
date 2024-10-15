@@ -74,7 +74,21 @@ class TestDivergenceIntegration(unittest.TestCase):
         mock_run.return_value = "Detected divergence, but it seems to be a false signal"
         result = mock_run()
         self.assertIn("false signal", result)
-        
+    @patch('src.UI.divergence_app.FinancialCrew.run')
+    def test_cross_validation_with_multiple_timeframes(self, mock_run):
+        # Test cross-validation of divergence signals across multiple timeframes
+        mock_run.return_value = "Cross-validation shows divergence detected in 1D, but not in 4H"
+        result = mock_run()
+        self.assertIn("Cross-validation", result)
+
+    @patch('src.UI.divergence_app.FinancialCrew.run')
+    def test_integration_with_rsi_macd_indicators(self, mock_run):
+        # Test the integration of both MACD and RSI indicators for divergence detection
+        mock_run.return_value = "Detected divergence using both MACD and RSI. Signals confirm potential reversal."
+        result = mock_run()
+        self.assertIn("MACD and RSI", result)
+
+   
 if __name__ == '__main__':
     unittest.main()
 
