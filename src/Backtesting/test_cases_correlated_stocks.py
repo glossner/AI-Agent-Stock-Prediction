@@ -48,5 +48,21 @@ class TestCorrelationIndicator(unittest.TestCase):
             result = agent.calculate_correlation()
             self.assertIn("The correlation between", result.description)
 
+    def test_invalid_stock_tickers(self):
+        """Unit test for handling invalid stock tickers."""
+        with patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data') as mock_fetch:
+            mock_fetch.return_value = mock_invalid_stock_data
+            agent = CorrelationAgent(stock1="INVALID1", stock2="INVALID2")
+            result = agent.calculate_correlation()
+            self.assertEqual(result.expected_output, "The correlation between INVALID1 and INVALID2 is: nan")
+
+    def test_correlation_with_insufficient_data(self):
+        """Unit test for correlation with insufficient data."""
+        with patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data') as mock_fetch:
+            mock_fetch.return_value = mock_insufficient_data
+            agent = CorrelationAgent(stock1="AAPL", stock2="MSFT")
+            result = agent.calculate_correlation()
+            self.assertEqual(result.expected_output, "The correlation between AAPL and MSFT is: nan")
+
 if __name__ == '__main__':
     unittest.main()
