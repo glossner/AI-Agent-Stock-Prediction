@@ -20,5 +20,19 @@ class TestBollingerBands(unittest.TestCase):
         self.assertIn('Lower Band', result)
         self.assertIn('Moving Average', result)
 
+    def test_calculate_bands_with_insufficient_data(self):
+        # Test case for handling insufficient data
+        insufficient_data = pd.DataFrame({
+            'Close': [100, 102]
+        })
+        bollinger = BollingerBands(insufficient_data)
+        with self.assertRaises(ValueError):
+            bollinger.calculate_bands()
+
+    def test_bollinger_agent_initialization(self):
+        # Test for agent initialization
+        agent = BollingerAnalysisAgents().bollinger_bands_investment_advisor()
+        self.assertEqual(agent.role, 'Bollinger Bands Investment Advisor')
+        
 if __name__ == '__main__':
     unittest.main()
