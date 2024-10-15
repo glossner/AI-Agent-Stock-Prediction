@@ -84,6 +84,22 @@ class TestFibonacciRetracement(unittest.TestCase):
         levels = fib.calculate_levels()
         self.assertIn('38.2%', levels)
 
+# Integration Tests
+class TestFibonacciIntegration(unittest.TestCase):
 
+    @patch('src.UI.main2.DataFetcher.get_stock_data')
+    def test_fibonacci_analysis_with_live_market_data(self, mock_get_stock_data):
+        # Mock live market data
+        mock_get_stock_data.return_value = pd.DataFrame({
+            'High': [140, 130, 120],
+            'Low': [110, 105, 100]
+        })
+
+        company = 'AAPL'
+        financial_crew = FinancialCrew(company, mock_get_stock_data.return_value)
+        result = financial_crew.run()
+        
+        self.assertIn('Fibonacci Analysis Report', result)
+        
 if __name__ == '__main__':
     unittest.main()
