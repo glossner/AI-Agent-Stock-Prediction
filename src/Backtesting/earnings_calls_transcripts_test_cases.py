@@ -32,5 +32,15 @@ class TestEarningsSecAnalysis(unittest.TestCase):
         self.assertIn('A detailed earnings call analysis', task.expected_output)
         self.assertEqual(task.agent, agent)
 
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_earnings_transcript')
+    def test_fetch_earnings_calls_transcript(self, mock_fetch_transcript):
+        # Mock fetching transcript
+        mock_transcript_data = 'This is a mock transcript of the earnings call.'
+        mock_fetch_transcript.return_value = mock_transcript_data
+
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        result = financial_crew.fetch_earnings_transcript(2023, 4)
+
+        self.assertEqual(result, mock_transcript_data)
 if __name__ == '__main__':
     unittest.main()
