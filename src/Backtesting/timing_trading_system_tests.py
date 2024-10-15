@@ -53,6 +53,20 @@ class TestBuySellDecisionAgent(unittest.TestCase):
         mock_sentiment_data = {"sentiment_score": 0.50}  # Neutral sentiment
         hold_task = self.decision_agent.make_decision()
         self.assertIn('hold', hold_task.expected_output.lower())
+        
+class TestTimingTradingSystem(unittest.TestCase):
+
+    @patch('src.Data_Retrieval.timing_trading_data_fetcher.DataFetcher.get_earnings_date')
+    @patch('src.Data_Retrieval.timing_trading_data_fetcher.DataFetcher.get_stock_news')
+    def test_integration_sentiment_analysis_before_earnings(self, mock_get_stock_news, mock_get_earnings_date):
+        # Mock stock news and earnings date
+        mock_get_earnings_date.return_value = "2024-10-30"
+        mock_get_stock_news.return_value = [{"summary": "Positive earnings report expected"}]
+
+        # Test the full workflow for sentiment analysis
+        trading_system = TimingTradingSystem("AAPL")
+        result = trading_system.run()
+        self.assertIn("Sentiment analysis report", result)
 
    
 if __name__ == '__main__':
