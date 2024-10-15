@@ -21,6 +21,16 @@ class TestMACDIndicator(unittest.TestCase):
         self.assertIn('Signal Line', macd_data.columns)
         self.assertIn('MACD Histogram', macd_data.columns)
 
+    def test_macd_trading_advisor_initialization(self):
+        macd_agent = MACDAnalysisAgent().macd_trading_advisor()
+        self.assertEqual(macd_agent.role, 'MACD Trading Advisor')
+        self.assertIn('Interpret MACD signals', macd_agent.goal)
+
+    def test_macd_analysis_task(self):
+        agent = MACDAnalysisAgent().macd_trading_advisor()
+        macd_data = self.macd_indicator.calculate(self.data)
+        task = MACDAnalysisAgent().macd_analysis(agent, macd_data)
+        self.assertIn('Analyze the provided MACD data', task.description)
 
 if __name__ == '__main__':
     unittest.main()
