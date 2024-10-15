@@ -67,6 +67,16 @@ class TestSentimentAnalysisIntegration(unittest.TestCase):
         sentiment_crew = SentimentCrew("AAPL")
         result = sentiment_crew.run()
         self.assertIn("Buy recommendation", result)
-        
+
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.fetch_news')
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.analyze_sentiment')
+    def test_sentiment_analysis_with_multiple_data_sources(self, mock_analyze_sentiment, mock_fetch_news):
+        mock_fetch_news.side_effect = ["News1", "News2"]
+        mock_analyze_sentiment.return_value = "Mixed"
+        sentiment_crew = SentimentCrew("Tech Sector")
+        result = sentiment_crew.run()
+        self.assertIn("Mixed", result)
+
+
 if __name__ == "__main__":
     unittest.main()
