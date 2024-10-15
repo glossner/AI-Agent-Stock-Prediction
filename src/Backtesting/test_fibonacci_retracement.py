@@ -100,6 +100,33 @@ class TestFibonacciIntegration(unittest.TestCase):
         result = financial_crew.run()
         
         self.assertIn('Fibonacci Analysis Report', result)
-        
+
+    @patch('src.UI.main2.DataFetcher.get_stock_data')
+    def test_cross_validation_with_multiple_timeframes(self, mock_get_stock_data):
+        # Mock data for different timeframes
+        mock_get_stock_data.return_value = pd.DataFrame({
+            'High': [140, 130, 120],
+            'Low': [110, 105, 100]
+        })
+
+        company = 'GOOGL'
+        financial_crew = FinancialCrew(company, mock_get_stock_data.return_value)
+        result = financial_crew.run()
+
+        self.assertIn('Fibonacci Analysis Report', result)
+
+    @patch('src.UI.main2.DataFetcher.get_stock_data')
+    def test_timing_strategy_with_earnings_reports(self, mock_get_stock_data):
+        mock_get_stock_data.return_value = pd.DataFrame({
+            'High': [160, 150, 140],
+            'Low': [120, 115, 110]
+        })
+
+        company = 'MSFT'
+        financial_crew = FinancialCrew(company, mock_get_stock_data.return_value)
+        result = financial_crew.run()
+
+        self.assertIn('Fibonacci Analysis Report', result)
+              
 if __name__ == '__main__':
     unittest.main()
