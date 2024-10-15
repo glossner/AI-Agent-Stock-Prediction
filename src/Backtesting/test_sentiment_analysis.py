@@ -23,7 +23,7 @@ class TestSentimentAnalysis(unittest.TestCase):
         mock_fetch_news.return_value = ""
         result = self.sentiment_crew.run()
         self.assertIn("No data found", result)
-        
+
     @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.fetch_news')
     def test_fetch_news_called(self, mock_fetch_news):
         self.sentiment_crew.run()
@@ -40,6 +40,20 @@ class TestSentimentAnalysis(unittest.TestCase):
         mock_investment_advice.return_value = "Hold recommendation"
         result = self.sentiment_crew.run()
         self.assertIn("Hold recommendation", result)
+
+    @patch('src.Agents.Analysis.stock_analysis_agents.StockAnalysisAgents.sentiment_analyst')
+    @patch('src.Agents.Analysis.stock_analysis_agents.StockAnalysisAgents.research_analyst')
+    def test_run(self, mock_research_analyst, mock_sentiment_analyst):
+        mock_research_analyst.return_value = MagicMock()
+        mock_sentiment_analyst.return_value = MagicMock()
+        result = self.sentiment_crew.run()
+        self.assertIn("Sentiment Analysis Report", result)
+
+    @patch('src.Data_Retrieval.timing_trading_data_fetcher.DataFetcher.get_stock_news')
+    def test_api_interaction_error(self, mock_get_stock_news):
+        mock_get_stock_news.side_effect = Exception("API Error")
+        with self.assertRaises(Exception):
+            self.sentiment_crew.run()
 
 if __name__ == "__main__":
     unittest.main()
