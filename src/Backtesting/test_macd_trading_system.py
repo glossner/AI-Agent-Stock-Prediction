@@ -68,6 +68,16 @@ class TestMACDIntegration(unittest.TestCase):
         result = financial_crew.run()
 
         self.assertIn('bullish', result)  # Check if the result includes MACD signals
-        
+
+    @patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data')
+    def test_macd_integration_with_trailing_stop(self, mock_get_stock_data):
+        mock_get_stock_data.return_value = pd.DataFrame({
+            'Close': [100, 102, 101, 105, 107, 110, 108, 111, 113]
+        })
+        financial_crew = FinancialCrew('AAPL')
+        result = financial_crew.run()
+
+        self.assertIn('trailing stop', result)  # Check if trailing stop logic is applied in the MACD analysis
+
 if __name__ == '__main__':
     unittest.main()
