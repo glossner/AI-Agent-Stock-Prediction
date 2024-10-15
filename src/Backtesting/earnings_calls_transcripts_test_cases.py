@@ -54,6 +54,31 @@ class TestEarningsSecAnalysis(unittest.TestCase):
         agents = EarningsSecAnalysisAgents()
         agent = agents.financial_analyst()
         self.assertEqual(agent.role, 'Financial Analyst')
-        
+
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_earnings_transcript')
+    def test_fetch_earnings_transcripts_invalid_params(self, mock_fetch_transcript):
+        # Mock invalid earnings call transcript fetch
+        mock_fetch_transcript.return_value = None
+
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        result = financial_crew.fetch_earnings_transcript(2023, 4)
+        self.assertIsNone(result)
+
+    def test_invalid_json_response(self):
+        # Test invalid JSON response handling
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        with patch('requests.get') as mock_get:
+            mock_get.return_value.json.side_effect = ValueError("Invalid JSON")
+            result = financial_crew.fetch_earnings_calls()
+            self.assertIsNone(result)
+
+    def test_missing_earnings_data(self):
+        # Test case for missing earnings data
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        with patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_earnings_calls', return_value=None):
+            result = financial_crew.fetch_earnings_calls()
+            self.assertIsNone(result)
+
+
 if __name__ == '__main__':
     unittest.main()
