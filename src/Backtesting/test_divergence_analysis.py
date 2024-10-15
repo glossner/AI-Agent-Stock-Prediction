@@ -39,6 +39,18 @@ class TestDivergenceDetection(unittest.TestCase):
         bearish_signals = detector.detect_bearish_divergence()
         self.assertTrue(len(bearish_signals) > 0)  # Ensure that some bearish signals are detected
 
+    def test_divergence_agent_initialization(self):
+        # Test the initialization of the divergence agent
+        divergence_agent = DivergenceAnalysisAgents().divergence_trading_advisor()
+        self.assertIsNotNone(divergence_agent)
+
+    def test_divergence_analysis_task(self):
+        # Test the creation of a divergence analysis task
+        divergence_agent = DivergenceAnalysisAgents().divergence_trading_advisor()
+        tasks = DivergenceAnalysisTasks()
+        task = tasks.detect_divergence(divergence_agent, self.price_data, self.macd_data, 'MACD')
+        self.assertIn("Bullish Divergences", task.description)
+        self.assertIn("Bearish Divergences", task.description)
 
 if __name__ == '__main__':
     unittest.main()
