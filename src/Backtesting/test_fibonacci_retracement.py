@@ -72,6 +72,18 @@ class TestFibonacciRetracement(unittest.TestCase):
         with self.assertRaises(ValueError):
             fib.calculate_levels()
 
+    def test_fibonacci_retracement_with_descending_prices(self):
+        data = pd.DataFrame({'High': [140, 130, 120], 'Low': [110, 105, 100]})
+        fib = FibonacciRetracement(data)
+        levels = fib.calculate_levels()
+        self.assertIn('61.8%', levels)
+
+    def test_fibonacci_retracement_with_historical_comparison(self):
+        data = pd.DataFrame({'High': [140, 130, 120], 'Low': [100, 90, 80]})
+        fib = FibonacciRetracement(data)
+        levels = fib.calculate_levels()
+        self.assertIn('38.2%', levels)
+
 
 if __name__ == '__main__':
     unittest.main()
