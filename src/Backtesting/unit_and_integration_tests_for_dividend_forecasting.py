@@ -66,6 +66,38 @@ class TestDividendForecasting(unittest.TestCase):
         with self.assertRaises(KeyError):
             self.tasks.forecast_dividend_growth(self.mock_agent, financial_data, self.company)
 
+    def test_predict_dividend_growth_missing_fields(self):
+        # Test handling of missing fields in financial data
+        financial_data = {
+            "IncomeStatement": None,
+            "CashFlowStatement": None
+        }
+        with self.assertRaises(KeyError):
+            self.tasks.forecast_dividend_growth(self.mock_agent, financial_data, self.company)
+
+    def test_calculated_growth(self):
+        # Test correct calculation of dividend growth
+        financial_data = {
+            "IncomeStatement": "Net Income: 3000000, Revenue: 9000000, Dividend: 70000",
+            "CashFlowStatement": "Operating Cash Flow: 3200000, Free Cash Flow: 2000000"
+        }
+        task = self.tasks.forecast_dividend_growth(self.mock_agent, financial_data, self.company)
+        self.assertIn("forecast", task.expected_output.lower())
+
+    def test_zero_dividend(self):
+        # Test case where the company does not pay dividends
+        financial_data = {
+            "IncomeStatement": "Net Income: 1500000, Revenue: 6000000, Dividend: 0",
+            "CashFlowStatement": "Operating Cash Flow: 1700000, Free Cash Flow: 900000"
+        }
+        task = self.tasks.forecast_dividend_growth(self.mock_agent, financial_data, self.company)
+        self.assertIn("forecast", task.expected_output.lower())
+
+    def test_error_handling_invalid_input(self):
+        # Test error handling for completely invalid input
+        financial_data = {}
+        with self.assertRaises(KeyError):
+            self.tasks.forecast_dividend_growth(self.mock_agent, financial_data, self.company)
 
 if __name__ == '__main__':
     unittest.main()
