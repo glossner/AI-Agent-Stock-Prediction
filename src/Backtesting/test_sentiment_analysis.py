@@ -77,6 +77,14 @@ class TestSentimentAnalysisIntegration(unittest.TestCase):
         result = sentiment_crew.run()
         self.assertIn("Mixed", result)
 
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.fetch_news')
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.analyze_sentiment')
+    def test_cross_source_sentiment_accuracy(self, mock_analyze_sentiment, mock_fetch_news):
+        mock_fetch_news.return_value = "Mixed sentiments across sources"
+        mock_analyze_sentiment.return_value = "Neutral"
+        sentiment_crew = SentimentCrew("MSFT")
+        result = sentiment_crew.run()
+        self.assertIn("Neutral", result)
 
 if __name__ == "__main__":
     unittest.main()
