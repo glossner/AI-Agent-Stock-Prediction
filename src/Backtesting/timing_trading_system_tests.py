@@ -28,6 +28,17 @@ class TestSentimentAnalysisAgent(unittest.TestCase):
             sentiment_task = self.sentiment_agent.analyze_sentiment()
             self.assertIn('neutral', sentiment_task.description.lower())
 
+class TestBuySellDecisionAgent(unittest.TestCase):
 
+    def setUp(self):
+        self.stock = "AAPL"
+        self.decision_agent = BuySellDecisionAgent(self.stock)
+
+    def test_buy_sell_decision(self):
+        # Mock sentiment data
+        mock_sentiment_data = {"sentiment_score": 0.85}
+        decision_task = self.decision_agent.make_decision()
+        self.assertIn('buy/sell recommendation', decision_task.expected_output)
+        
 if __name__ == '__main__':
     unittest.main()
