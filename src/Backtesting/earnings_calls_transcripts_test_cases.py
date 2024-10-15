@@ -111,8 +111,25 @@ class TestIntegrationEarningsSecFilings(unittest.TestCase):
         self.assertIn("SEC Data", result)
         self.assertIn("Earnings Data", result)
         self.assertIn("sentiment", result)  # Verifying sentiment analysis
-        
-                
+
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_earnings_transcript')
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_sec_filings')
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_earnings_calls')
+    def test_integration_with_transcripts(self, mock_fetch_earnings_calls, mock_fetch_sec_filings, mock_fetch_transcript):
+        # Mock SEC filings, earnings calls, and transcript data
+        mock_sec_data = '{"sec_filings": [{"type": "10-K", "filingDate": "2022-12-31"}]}'
+        mock_earnings_data = '{"earnings_calls": [{"date": "2023-01-25", "quarter": "Q4"}]}'
+        mock_transcript_data = 'This is a mock transcript of the earnings call.'
+        mock_fetch_sec_filings.return_value = mock_sec_data
+        mock_fetch_earnings_calls.return_value = mock_earnings_data
+        mock_fetch_transcript.return_value = mock_transcript_data
+
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        result = financial_crew.run()
+
+        self.assertIn("SEC Data", result)
+        self.assertIn("Earnings Data", result)
+        self.assertIn("mock transcript", result)  # Verifying transcript analysis
 
 if __name__ == '__main__':
     unittest.main()
