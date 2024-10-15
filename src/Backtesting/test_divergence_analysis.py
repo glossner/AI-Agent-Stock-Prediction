@@ -66,7 +66,15 @@ class TestDivergenceDetection(unittest.TestCase):
         bearish_signals = detector.detect_bearish_divergence()
         self.assertTrue(len(bearish_signals) > 0)  # Ensure bearish signals are detected
 
+class TestDivergenceIntegration(unittest.TestCase):
 
+    @patch('src.UI.divergence_app.FinancialCrew.run')
+    def test_false_positive_detection(self, mock_run):
+        # Test to detect false positives in divergence signal detection
+        mock_run.return_value = "Detected divergence, but it seems to be a false signal"
+        result = mock_run()
+        self.assertIn("false signal", result)
+        
 if __name__ == '__main__':
     unittest.main()
 
