@@ -89,5 +89,21 @@ class TestEconomicCrew(unittest.TestCase):
         # Check agent initialization
         self.assertTrue(mock_forecasting_agent.called)
 
+class TestIntegrationEconomicForecasting(unittest.TestCase):
+    @patch('src.UI.predict_sectors_main.EconomicCrew.fetch_macroeconomic_data')
+    @patch('src.UI.predict_sectors_main.EconomicCrew.get_combined_data')
+    @patch('src.Agents.Analysis.stock_analysis_tasks.Task')
+    def test_economic_forecasting_workflow(self, mock_task, mock_combined_data, mock_fetch_macroeconomic_data):
+        # Mock data
+        mock_fetch_macroeconomic_data.return_value = mock_macroeconomic_data
+        mock_combined_data.return_value = mock_combined_data
+
+        # Initialize the EconomicCrew
+        economic_crew = EconomicCrew()
+        result = economic_crew.run()
+
+        # Check if the crew output is as expected
+        self.assertIn("Sector Performance Prediction Report", str(result))
+        
 if __name__ == '__main__':
     unittest.main()
