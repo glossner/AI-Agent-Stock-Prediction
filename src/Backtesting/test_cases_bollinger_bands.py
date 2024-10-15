@@ -80,5 +80,18 @@ class TestBollingerBandsIntegration(unittest.TestCase):
         result = financial_crew.run()
         self.assertIn("Here is the Report", result)
 
+    @patch('src.Indicators.bollinger.BollingerBands.calculate_bands')
+    def test_bollinger_bands_with_market_trends(self, mock_bollinger_bands):
+        # Integration test to simulate Bollinger Bands analysis with different market trends
+        mock_bollinger_bands.return_value = {
+            'Upper Band': pd.Series([120]),
+            'Lower Band': pd.Series([100]),
+            'Moving Average': pd.Series([110])
+        }
+        financial_crew = FinancialCrew("MSFT", pd.DataFrame())
+        result = financial_crew.run()
+        self.assertIn("Here is the Report", result)
+
+        
 if __name__ == '__main__':
     unittest.main()
