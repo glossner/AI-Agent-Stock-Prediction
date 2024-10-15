@@ -52,6 +52,21 @@ class TestDivergenceDetection(unittest.TestCase):
         self.assertIn("Bullish Divergences", task.description)
         self.assertIn("Bearish Divergences", task.description)
 
+    def test_missing_data_handling(self):
+        # Test missing data handling in the divergence pattern detection
+        incomplete_price_data = pd.DataFrame({'Close': [100, None, 101, None, 105, 104, 106, None]})
+        detector = DivergenceDetector(incomplete_price_data, self.macd_data, 'MACD')
+        bullish_signals = detector.detect_bullish_divergence()
+        self.assertEqual(len(bullish_signals), 0)  # Expect no signals due to missing data
+
+    def test_validate_detection_in_market_conditions(self):
+        # Test divergence detection in different market conditions
+        bearish_market_price_data = pd.DataFrame({'Close': [108, 107, 106, 105, 104, 103, 102, 101]})
+        detector = DivergenceDetector(bearish_market_price_data, self.macd_data, 'MACD')
+        bearish_signals = detector.detect_bearish_divergence()
+        self.assertTrue(len(bearish_signals) > 0)  # Ensure bearish signals are detected
+
+
 if __name__ == '__main__':
     unittest.main()
 
