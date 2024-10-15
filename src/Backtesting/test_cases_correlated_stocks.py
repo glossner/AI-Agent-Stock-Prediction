@@ -99,6 +99,14 @@ class TestIntegrationCorrelation(unittest.TestCase):
         crew = StockCorrelationCrew(stock1="AAPL", stock2="MSFT")
         result = crew.run()
         self.assertIn("correlation between AAPL and MSFT", result)
+
+    @patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data')
+    def test_integration_with_diverse_stock_pairs(self, mock_fetch):
+        """Integration test with different stock pairs."""
+        mock_fetch.side_effect = [mock_stock_data, mock_stock_data]
+        crew = StockCorrelationCrew(stock1="GOOG", stock2="TSLA")
+        result = crew.run()
+        self.assertIn("correlation between GOOG and TSLA", result)
         
 if __name__ == '__main__':
     unittest.main()
