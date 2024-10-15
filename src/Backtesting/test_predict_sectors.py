@@ -104,6 +104,20 @@ class TestIntegrationEconomicForecasting(unittest.TestCase):
 
         # Check if the crew output is as expected
         self.assertIn("Sector Performance Prediction Report", str(result))
+
+    @patch('src.UI.predict_sectors_main.EconomicCrew.get_combined_data')
+    def test_sector_performance_prediction_with_alternative_policy_changes(self, mock_get_combined_data):
+        # Introduce hypothetical policy changes
+        mock_combined_data['PolicyChanges'] = "Alternative Policy Changes: Policy Z"
+        mock_get_combined_data.return_value = mock_combined_data
+
+        # Run the crew with the updated policy changes
+        economic_crew = EconomicCrew()
+        result = economic_crew.run()
+
+        # Validate output with the alternative policy changes
+        self.assertIn("Policy Z", str(result))
+
         
 if __name__ == '__main__':
     unittest.main()
