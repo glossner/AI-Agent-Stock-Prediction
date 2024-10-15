@@ -81,6 +81,16 @@ class TestCorrelationIndicator(unittest.TestCase):
         agent = InvestmentDecisionAgent(stock1="AAPL", stock2="MSFT")
         result = agent.investment_decision()
         self.assertIn("buy/sell recommendations", result.expected_output)
+
+class TestIntegrationCorrelation(unittest.TestCase):
+
+    @patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data')
+    def test_integration_with_real_time_data_streams(self, mock_fetch):
+        """Integration test with mock real-time data."""
+        mock_fetch.side_effect = [mock_stock_data, mock_stock_data]
+        crew = StockCorrelationCrew(stock1="AAPL", stock2="MSFT")
+        result = crew.run()
+        self.assertIn("correlation between AAPL and MSFT", result)
         
 if __name__ == '__main__':
     unittest.main()
