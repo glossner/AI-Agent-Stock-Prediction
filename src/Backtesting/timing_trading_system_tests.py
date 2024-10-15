@@ -39,6 +39,21 @@ class TestBuySellDecisionAgent(unittest.TestCase):
         mock_sentiment_data = {"sentiment_score": 0.85}
         decision_task = self.decision_agent.make_decision()
         self.assertIn('buy/sell recommendation', decision_task.expected_output)
-        
+
+    def test_market_scenarios(self):
+        # Simulate different scenarios
+        mock_sentiment_data = {"sentiment_score": 0.85}  # Positive sentiment
+        buy_task = self.decision_agent.make_decision()
+        self.assertIn('buy', buy_task.expected_output.lower())
+
+        mock_sentiment_data = {"sentiment_score": 0.45}  # Negative sentiment
+        sell_task = self.decision_agent.make_decision()
+        self.assertIn('sell', sell_task.expected_output.lower())
+
+        mock_sentiment_data = {"sentiment_score": 0.50}  # Neutral sentiment
+        hold_task = self.decision_agent.make_decision()
+        self.assertIn('hold', hold_task.expected_output.lower())
+
+   
 if __name__ == '__main__':
     unittest.main()
