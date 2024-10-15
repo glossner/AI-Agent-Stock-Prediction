@@ -91,6 +91,14 @@ class TestIntegrationCorrelation(unittest.TestCase):
         crew = StockCorrelationCrew(stock1="AAPL", stock2="MSFT")
         result = crew.run()
         self.assertIn("correlation between AAPL and MSFT", result)
+
+    @patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data')
+    def test_cross_correlation_accuracy(self, mock_fetch):
+        """Integration test to check cross-correlation accuracy."""
+        mock_fetch.side_effect = [mock_stock_data, mock_stock_data]
+        crew = StockCorrelationCrew(stock1="AAPL", stock2="MSFT")
+        result = crew.run()
+        self.assertIn("correlation between AAPL and MSFT", result)
         
 if __name__ == '__main__':
     unittest.main()
