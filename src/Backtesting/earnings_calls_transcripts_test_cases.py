@@ -96,7 +96,23 @@ class TestIntegrationEarningsSecFilings(unittest.TestCase):
         self.assertIn("SEC Data", result)
         self.assertIn("Earnings Data", result)
 
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_sec_filings')
+    @patch('src.UI.earnings_calls_sec_filings_app.FinancialCrew.fetch_earnings_calls')
+    def test_sentiment_analysis_integration(self, mock_fetch_earnings_calls, mock_fetch_sec_filings):
+        # Mock SEC filings and earnings call data
+        mock_sec_data = '{"sec_filings": [{"type": "10-K", "filingDate": "2022-12-31"}]}'
+        mock_earnings_data = '{"earnings_calls": [{"date": "2023-01-25", "quarter": "Q4"}]}'
+        mock_fetch_sec_filings.return_value = mock_sec_data
+        mock_fetch_earnings_calls.return_value = mock_earnings_data
+
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        result = financial_crew.run()
+
+        self.assertIn("SEC Data", result)
+        self.assertIn("Earnings Data", result)
+        self.assertIn("sentiment", result)  # Verifying sentiment analysis
         
+                
 
 if __name__ == '__main__':
     unittest.main()
