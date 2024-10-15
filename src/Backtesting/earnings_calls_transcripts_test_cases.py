@@ -42,5 +42,18 @@ class TestEarningsSecAnalysis(unittest.TestCase):
         result = financial_crew.fetch_earnings_transcript(2023, 4)
 
         self.assertEqual(result, mock_transcript_data)
+
+    def test_empty_sec_filings(self):
+        # Test case where no SEC filings are found
+        financial_crew = FinancialCrew("AAPL", "NASDAQ")
+        result = financial_crew.fetch_sec_filings()
+        self.assertIsNone(result)
+
+    def test_financial_analyst_initialization(self):
+        # Test initialization of the financial analyst agent
+        agents = EarningsSecAnalysisAgents()
+        agent = agents.financial_analyst()
+        self.assertEqual(agent.role, 'Financial Analyst')
+        
 if __name__ == '__main__':
     unittest.main()
