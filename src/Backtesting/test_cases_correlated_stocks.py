@@ -34,5 +34,19 @@ class TestCorrelationIndicator(unittest.TestCase):
         self.assertEqual(agent.stock1, "AAPL")
         self.assertEqual(agent.stock2, "MSFT")
 
+    def test_crew_initialization(self):
+        """Unit test for initializing CrewAI."""
+        crew = StockCorrelationCrew(stock1="AAPL", stock2="MSFT")
+        self.assertEqual(crew.stock1, "AAPL")
+        self.assertEqual(crew.stock2, "MSFT")
+
+    def test_fetch_stock_data(self):
+        """Unit test for fetching stock data."""
+        with patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data') as mock_fetch:
+            mock_fetch.return_value = mock_stock_data
+            agent = CorrelationAgent(stock1="AAPL", stock2="MSFT")
+            result = agent.calculate_correlation()
+            self.assertIn("The correlation between", result.description)
+
 if __name__ == '__main__':
     unittest.main()
