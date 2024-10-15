@@ -55,5 +55,18 @@ class TestSentimentAnalysis(unittest.TestCase):
         with self.assertRaises(Exception):
             self.sentiment_crew.run()
 
+class TestSentimentAnalysisIntegration(unittest.TestCase):
+
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.fetch_news')
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.analyze_sentiment')
+    @patch('src.Agents.Analysis.stock_analysis_tasks.StockAnalysisTasks.provide_investment_advice')
+    def test_integration_sentiment_analysis_and_advice(self, mock_provide_investment_advice, mock_analyze_sentiment, mock_fetch_news):
+        mock_fetch_news.return_value = "Positive sentiment on AAPL"
+        mock_analyze_sentiment.return_value = "Positive"
+        mock_provide_investment_advice.return_value = "Buy recommendation"
+        sentiment_crew = SentimentCrew("AAPL")
+        result = sentiment_crew.run()
+        self.assertIn("Buy recommendation", result)
+        
 if __name__ == "__main__":
     unittest.main()
