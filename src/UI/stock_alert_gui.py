@@ -70,7 +70,20 @@ class StockAlertGUI:
         self.alert_thread.start()
 
 
+    def stop_monitoring(self):
+        self.monitoring = False
+        self.status_label.config(text="Status: Stopped")
+        self.button_start.config(state=tk.NORMAL)
+        self.button_stop.config(state=tk.DISABLED)
 
+    def run_alert_system(self, stock, threshold, notify_email, notify_sms):
+        alert_system = StockAlertSystem(stock, threshold, notify_email, notify_sms)
+
+        while self.monitoring:
+            alert_system.monitor_stock()
+            self.status_label.config(text=f"Status: Monitoring {stock} for changes >= {threshold}%")
+        
+        self.status_label.config(text="Status: Stopped")
 
 if __name__ == "__main__":
     root = tk.Tk()
