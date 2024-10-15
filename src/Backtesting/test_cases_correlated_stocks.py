@@ -64,5 +64,23 @@ class TestCorrelationIndicator(unittest.TestCase):
             result = agent.calculate_correlation()
             self.assertEqual(result.expected_output, "The correlation between AAPL and MSFT is: nan")
 
+    def test_analyze_correlation(self):
+        """Unit test for analyzing correlation using the agent."""
+        agent = CorrelationAgent(stock1="AAPL", stock2="MSFT")
+        result = agent.calculate_correlation()
+        self.assertIn("Analyze the historical price data", result.description)
+
+    def test_identify_trading_opportunities(self):
+        """Unit test to identify trading opportunities from correlation."""
+        agent = InvestmentDecisionAgent(stock1="AAPL", stock2="MSFT")
+        result = agent.investment_decision()
+        self.assertIn("provide an investment decision", result.description)
+
+    def test_trading_signal_generation(self):
+        """Unit test to test trading signal generation based on correlation."""
+        agent = InvestmentDecisionAgent(stock1="AAPL", stock2="MSFT")
+        result = agent.investment_decision()
+        self.assertIn("buy/sell recommendations", result.expected_output)
+        
 if __name__ == '__main__':
     unittest.main()
