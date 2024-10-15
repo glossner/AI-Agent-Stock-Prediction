@@ -44,6 +44,31 @@ class StockAlertGUI:
         self.monitoring = False
         self.alert_thread = None
 
+    def start_monitoring(self):
+        stock = self.entry_stock.get().upper()
+        threshold = self.entry_threshold.get()
+        notify_email = self.var_email.get()
+        notify_sms = self.var_sms.get()
+
+        if not stock or not threshold:
+            messagebox.showwarning("Input Error", "Please enter stock ticker and threshold.")
+            return
+
+        try:
+            threshold = float(threshold)
+        except ValueError:
+            messagebox.showwarning("Input Error", "Please enter a valid number for the threshold.")
+            return
+
+        self.status_label.config(text="Status: Monitoring...")
+        self.monitoring = True
+        self.button_start.config(state=tk.DISABLED)
+        self.button_stop.config(state=tk.NORMAL)
+
+        # Run the alert system in a separate thread
+        self.alert_thread = threading.Thread(target=self.run_alert_system, args=(stock, threshold, notify_email, notify_sms))
+        self.alert_thread.start()
+
 
 
 
