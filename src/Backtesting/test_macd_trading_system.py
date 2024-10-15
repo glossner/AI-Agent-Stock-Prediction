@@ -32,5 +32,18 @@ class TestMACDIndicator(unittest.TestCase):
         task = MACDAnalysisAgent().macd_analysis(agent, macd_data)
         self.assertIn('Analyze the provided MACD data', task.description)
 
+    @patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data')
+    def test_fetching_stock_data(self, mock_get_stock_data):
+        mock_get_stock_data.return_value = pd.DataFrame({
+            'Close': [100, 102, 101, 105, 107]
+        })
+        data_fetcher = DataFetcher()
+        stock_data = data_fetcher.get_stock_data('AAPL')
+        self.assertFalse(stock_data.empty)
+
+    def test_crew_ai_agents_initialization(self):
+        macd_agent = MACDAnalysisAgent().macd_trading_advisor()
+        self.assertEqual(macd_agent.role, 'MACD Trading Advisor')
+        
 if __name__ == '__main__':
     unittest.main()
