@@ -54,6 +54,20 @@ class TestBollingerBands(unittest.TestCase):
         mock_agent.side_effect = Exception("API Error")
         with self.assertRaises(Exception):
             BollingerAnalysisAgents().bollinger_bands_investment_advisor()
-            
+
+# Integration Test Cases
+
+class TestBollingerBandsIntegration(unittest.TestCase):
+    @patch('src.Data_Retrieval.data_fetcher.DataFetcher.get_stock_data')
+    def test_bollinger_bands_end_to_end(self, mock_stock_data):
+        # Integration test to check the end-to-end flow
+        mock_stock_data.return_value = pd.DataFrame({
+            'Close': [100, 102, 104, 106, 108, 110, 112, 114, 116, 118]
+        })
+        financial_crew = FinancialCrew("AAPL", mock_stock_data.return_value)
+        result = financial_crew.run()
+        self.assertIn("Here is the Report", result)
+
+
 if __name__ == '__main__':
     unittest.main()
