@@ -1,3 +1,4 @@
+from src.Agents.base_agent import BaseAgent
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.arima.model import ARIMA
@@ -6,167 +7,167 @@ from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
+from pydantic import Field
+from typing import Tuple, Union
 
-class TrendPredictionAgent:
-    def __init__(self):
-        self.arima_model = None
-        self.lstm_model = None
-        self.scaler = MinMaxScaler(feature_range=(0, 1))
+class TrendPredictionAgent(BaseAgent):
+    arima_model: ARIMA = Field(default=None)
+    lstm_model: Sequential = Field(default=None)
+    scaler: MinMaxScaler = Field(default_factory=lambda: MinMaxScaler(feature_range=(0, 1)))
 
-    def prepare_data(self, data, sequence_length=60):
-        # Check for 'close' or 'Close' column
-        if 'close' in data.columns:
-            close_column = 'close'
-        elif 'Close' in data.columns:
-            close_column = 'Close'
-        else:
-            raise ValueError("No 'close' or 'Close' column found in the data")
+    def __init__(self, **data):
+        super().__init__(
+            role='Trend Prediction Agent',
+            goal='Predict future market trends using statistical and machine learning models',
+            backstory='Expert in time series analysis and forecasting for financial markets',
+            **data
+        )
 
-        # Prepare data for ARIMA
-        arima_data = data[close_column].values
+    def predict_trend(self, data: pd.DataFrame, model_type: str = 'arima', forecast_steps: int = 30) -> Tuple[str, float, pd.Series]:
+        try:
+            if model_type == 'arima':
+                return self._predict_arima(data, forecast_steps)
+            elif model_type == 'lstm':
+                return self._predict_lstm(data, forecast_steps)
+            else:
+                raise ValueError(f"Unsupported model type: {model_type}")
+        except Exception as e:
+            print(f"Error in {model_type} prediction: {str(e)}")
+            return "Unknown", 0.0, pd.Series()
 
-        # Prepare data for LSTM
-        scaled_data = self.scaler.fit_transform(data[close_column].values.reshape(-1, 1))
-        
-        x_lstm, y_lstm = [], []
-        for i in range(len(scaled_data) - sequence_length):
-            x_lstm.append(scaled_data[i:(i + sequence_length), 0])
-            y_lstm.append(scaled_data[i + sequence_length, 0])
-        
-        x_lstm, y_lstm = np.array(x_lstm), np.array(y_lstm)
-        x_lstm = np.reshape(x_lstm, (x_lstm.shape[0], x_lstm.shape[1], 1))
-
-        return arima_data, x_lstm, y_lstm
-
-    def train_arima(self, data):
-        arima_data, _, _ = self.prepare_data(data)
-        self.arima_model = ARIMA(arima_data, order=(5,1,0))
-        self.arima_model = self.arima_model.fit()
-        return self.arima_model
-
-    def train_lstm(self, data, epochs=50, batch_size=32):
-        _, x_lstm, y_lstm = self.prepare_data(data)
-        
-        self.lstm_model = Sequential()
-        self.lstm_model.add(LSTM(units=50, return_sequences=True, input_shape=(x_lstm.shape[1], 1)))
-        self.lstm_model.add(LSTM(units=50))
-        self.lstm_model.add(Dense(1))
-
-        self.lstm_model.compile(optimizer='adam', loss='mean_squared_error')
-        self.lstm_model.fit(x_lstm, y_lstm, epochs=epochs, batch_size=batch_size)
-        
-        return self.lstm_model
-
-    def predict_trend(self, data, model_type='arima', future_steps=30):
-        if 'close' in data.columns:
-            close_column = 'close'
-        elif 'Close' in data.columns:
-            close_column = 'Close'
-        else:
-            raise ValueError("No 'close' or 'Close' column found in the data")
-
-        if model_type == 'arima':
+    def _predict_arima(self, data: pd.DataFrame, forecast_steps: int) -> Tuple[str, float, pd.Series]:
+        try:
             if self.arima_model is None:
-                self.train_arima(data)
-            forecast = self.arima_model.forecast(steps=future_steps)
-            predicted_trend = 'Uptrend' if forecast[-1] > data[close_column].iloc[-1] else 'Downtrend'
-            return predicted_trend, forecast
-        elif model_type == 'lstm':
-            if self.lstm_model is None:
-                self.train_lstm(data)
-            _, x_lstm, _ = self.prepare_data(data)
-            last_sequence = x_lstm[-1].reshape(1, x_lstm.shape[1], 1)
-            predicted_prices = []
-            for _ in range(future_steps):
-                price = self.lstm_model.predict(last_sequence)
-                predicted_prices.append(price[0, 0])
-                last_sequence = np.roll(last_sequence, -1, axis=1)
-                last_sequence[0, -1, 0] = price[0, 0]
-            predicted_prices = self.scaler.inverse_transform(np.array(predicted_prices).reshape(-1, 1)).flatten()
-            predicted_trend = 'Uptrend' if predicted_prices[-1] > data[close_column].iloc[-1] else 'Downtrend'
-            return predicted_trend, predicted_prices
-        else:
-            raise ValueError("Invalid model type. Choose 'arima' or 'lstm'.")
-
-    def evaluate_model(self, data, model_type='arima'):
-        if 'close' in data.columns:
-            close_column = 'close'
-        elif 'Close' in data.columns:
-            close_column = 'Close'
-        else:
-            raise ValueError("No 'close' or 'Close' column found in the data")
-
-        train_size = int(len(data) * 0.8)
-        train, test = data[:train_size], data[train_size:]
-        
-        if model_type == 'arima':
-            self.train_arima(train)
-            predictions = self.arima_model.forecast(steps=len(test))
-        elif model_type == 'lstm':
-            self.train_lstm(train)
-            _, x_lstm, _ = self.prepare_data(data)
-            predictions = self.lstm_model.predict(x_lstm[-len(test):])
-            predictions = self.scaler.inverse_transform(predictions).flatten()
-        else:
-            raise ValueError("Invalid model type. Choose 'arima' or 'lstm'.")
-        
-        mse = mean_squared_error(test[close_column], predictions)
-        rmse = np.sqrt(mse)
-        
-        plt.figure(figsize=(12,6))
-        plt.plot(test.index, test[close_column], label='Actual')
-        plt.plot(test.index, predictions, label='Predicted')
-        plt.legend()
-        plt.title(f'{model_type.upper()} Model Evaluation')
-        plt.show()
-        
-        return rmse
-
-    def optimize_model(self, data, model_type='arima'):
-        if 'close' in data.columns:
-            close_column = 'close'
-        elif 'Close' in data.columns:
-            close_column = 'Close'
-        else:
-            raise ValueError("No 'close' or 'Close' column found in the data")
-
-        if model_type == 'arima':
-            best_order = None
-            best_aic = np.inf
-            for p in range(0, 5):
-                for d in range(0, 2):
-                    for q in range(0, 5):
-                        try:
-                            model = ARIMA(data[close_column], order=(p, d, q))
-                            results = model.fit()
-                            if results.aic < best_aic:
-                                best_aic = results.aic
-                                best_order = (p, d, q)
-                        except:
-                            continue
-            self.arima_model = ARIMA(data[close_column], order=best_order).fit()
-            return best_order
-        elif model_type == 'lstm':
-            best_params = None
-            best_rmse = np.inf
-            for units in [32, 64, 128]:
-                for batch_size in [16, 32, 64]:
-                    for epochs in [50, 100]:
-                        self.lstm_model = Sequential()
-                        self.lstm_model.add(LSTM(units=units, return_sequences=True, input_shape=(60, 1)))
-                        self.lstm_model.add(LSTM(units=units))
-                        self.lstm_model.add(Dense(1))
-                        self.lstm_model.compile(optimizer='adam', loss='mean_squared_error')
-                        
-                        _, x_lstm, y_lstm = self.prepare_data(data)
-                        self.lstm_model.fit(x_lstm, y_lstm, epochs=epochs, batch_size=batch_size, verbose=0)
-                        
-                        rmse = self.evaluate_model(data, model_type='lstm')
-                        if rmse < best_rmse:
-                            best_rmse = rmse
-                            best_params = {'units': units, 'batch_size': batch_size, 'epochs': epochs}
+                self._train_arima(data)
             
-            self.train_lstm(data, epochs=best_params['epochs'], batch_size=best_params['batch_size'])
-            return best_params
-        else:
-            raise ValueError("Invalid model type. Choose 'arima' or 'lstm'.")
+            # Use the last known index for forecasting
+            last_date = data.index[-1]
+            forecast = self.arima_model.forecast(steps=forecast_steps)
+            forecast_index = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=forecast_steps)
+            forecast = pd.Series(forecast, index=forecast_index)
+            
+            last_price = data['Close'].iloc[-1]
+            predicted_price = forecast.iloc[0]
+            
+            trend = "Uptrend" if predicted_price > last_price else "Downtrend"
+            confidence = min(abs(predicted_price - last_price) / last_price, 1.0)  # Capped at 1.0
+            
+            return trend, confidence, forecast
+        except Exception as e:
+            print(f"Error in ARIMA prediction: {str(e)}")
+            return "Unknown", 0.0, pd.Series()
+
+    def _predict_lstm(self, data: pd.DataFrame, forecast_steps: int) -> Tuple[str, float, pd.Series]:
+        try:
+            if self.lstm_model is None:
+                self._train_lstm(data)
+            
+            scaled_data = self.scaler.transform(data['Close'].values.reshape(-1, 1))
+            last_60_days = scaled_data[-60:]
+            
+            forecast = []
+            current_batch = last_60_days
+            for _ in range(forecast_steps):
+                current_batch = current_batch.reshape((1, 60, 1))
+                next_pred = self.lstm_model.predict(current_batch)[0]
+                forecast.append(next_pred[0])
+                current_batch = np.append(current_batch[:, 1:, :], [[next_pred]], axis=1)
+            
+            forecast = self.scaler.inverse_transform(np.array(forecast).reshape(-1, 1)).flatten()
+            forecast_index = pd.date_range(start=data.index[-1] + pd.Timedelta(days=1), periods=forecast_steps)
+            forecast = pd.Series(forecast, index=forecast_index)
+            
+            last_price = data['Close'].iloc[-1]
+            predicted_price = forecast.iloc[0]
+            
+            trend = "Uptrend" if predicted_price > last_price else "Downtrend"
+            confidence = min(abs(predicted_price - last_price) / last_price, 1.0)  # Capped at 1.0
+            
+            return trend, confidence, forecast
+        except Exception as e:
+            print(f"Error in LSTM prediction: {str(e)}")
+            return "Unknown", 0.0, pd.Series()
+
+
+    def _train_arima(self, data: pd.DataFrame):
+        # Resample data to ensure consistent frequency
+        data_resampled = data['Close'].resample('D').last().ffill()
+        model = ARIMA(data_resampled, order=(5,1,0))
+        self.arima_model = model.fit()
+
+    def _train_lstm(self, data: pd.DataFrame):
+        scaled_data = self.scaler.fit_transform(data['Close'].values.reshape(-1, 1))
+        
+        X, y = [], []
+        for i in range(60, len(scaled_data)):
+            X.append(scaled_data[i-60:i, 0])
+            y.append(scaled_data[i, 0])
+        X, y = np.array(X), np.array(y)
+        X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+        
+        model = Sequential()
+        model.add(LSTM(units=50, return_sequences=True, input_shape=(X.shape[1], 1)))
+        model.add(LSTM(units=50))
+        model.add(Dense(1))
+        
+        model.compile(optimizer='adam', loss='mean_squared_error')
+        model.fit(X, y, epochs=1, batch_size=1, verbose=0)
+        
+        self.lstm_model = model
+
+    def predict_price_target(self, data: pd.DataFrame) -> dict:
+        try:
+            last_price = data['Close'].iloc[-1]
+            arima_trend, _ = self._predict_arima(data)
+            lstm_trend, _ = self._predict_lstm(data)
+            
+            if arima_trend == lstm_trend == "Uptrend":
+                predicted_price = last_price * 1.05
+            elif arima_trend == lstm_trend == "Downtrend":
+                predicted_price = last_price * 0.95
+            else:
+                predicted_price = last_price
+            
+            return {
+                'price_target': predicted_price,
+                'lower_bound': predicted_price * 0.95,
+                'upper_bound': predicted_price * 1.05
+            }
+        except Exception as e:
+            print(f"Error in price target prediction: {str(e)}")
+            return {
+                'price_target': last_price,
+                'lower_bound': last_price * 0.95,
+                'upper_bound': last_price * 1.05
+            }
+
+    def construct_message(self, data: pd.DataFrame) -> str:
+        arima_trend, arima_confidence = self._predict_arima(data)
+        lstm_trend, lstm_confidence = self._predict_lstm(data)
+        price_target = self.predict_price_target(data)
+
+        return f"""
+        Analyze the following trend predictions:
+        - ARIMA Prediction: {arima_trend} (Confidence: {arima_confidence:.2f})
+        - LSTM Prediction: {lstm_trend} (Confidence: {lstm_confidence:.2f})
+        - Price Target: ${price_target['price_target']:.2f} (Range: ${price_target['lower_bound']:.2f} - ${price_target['upper_bound']:.2f})
+
+        Provide insights on the future market trend based on these predictions.
+        Consider factors like potential trend reversals and overall market sentiment.
+        Limit your response to 3-4 sentences.
+        """
+
+    def respond(self, data: pd.DataFrame) -> str:
+        try:
+            arima_trend, arima_confidence, arima_forecast = self._predict_arima(data, forecast_steps=30)
+            lstm_trend, lstm_confidence, lstm_forecast = self._predict_lstm(data, forecast_steps=30)
+
+            response = f"ARIMA Prediction: {arima_trend} (Confidence: {arima_confidence:.2f})\n"
+            response += f"LSTM Prediction: {lstm_trend} (Confidence: {lstm_confidence:.2f})\n"
+            response += f"ARIMA Forecast (next 30 days): {arima_forecast.iloc[-1]:.2f}\n"
+            response += f"LSTM Forecast (next 30 days): {lstm_forecast.iloc[-1]:.2f}"
+            
+            return response
+        except Exception as e:
+            print(f"Error in respond: {str(e)}")
+            return "Unable to predict trend due to an error."

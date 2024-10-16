@@ -11,162 +11,200 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 import pandas_ta as ta
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
 from src.Data_Retrieval.data_fetcher import DataFetcher
 from src.Agents.Agent_Indicators.indicator_agent_sma import SMAIndicator
+from src.Agents.Analysis.trend_detection_agent import TrendDetectionAgent
 from src.Agents.Analysis.trend_prediction_agent import TrendPredictionAgent
-from src.globals import gpt_model
-from langchain.schema import HumanMessage
+from src.Agents.Analysis.signal_generation_agent import SignalGenerationAgent
+from src.Data_Retrieval.data_fetcher import DataFetcher
+from src.Agents.Agent_Indicators.indicator_agent_sma import SMAIndicator
+from src.Agents.Agent_Indicators.indicator_agent_rsi import RSIIndicator
+
+# Set page config
+st.set_page_config(page_title="Advanced Stock Analysis System", page_icon="📈", layout="wide")
+
+# Custom CSS
+st.markdown("""
+    <style>
+    .big-font {
+        font-size:20px !important;
+        font-weight: bold;
+    }
+    .stButton>button {
+        width: 100%;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Initialize agents
-data_fetcher = DataFetcher()
-trend_prediction_agent = TrendPredictionAgent()
+@st.cache_resource
+def load_agents():
+    return (
+        DataFetcher(),
+        SMAIndicator(),
+        RSIIndicator(),
+        TrendDetectionAgent(),
+        TrendPredictionAgent(),
+        SignalGenerationAgent(
+            trend_detection_agent=TrendDetectionAgent(),
+            trend_prediction_agent=TrendPredictionAgent()
+        )
+    )
 
-# Function to generate AI analysis
-def generate_ai_analysis(data, symbol):
-    if gpt_model is None:
-        return "AI analysis is not available due to model initialization error."
+data_fetcher, sma_indicator, rsi_indicator, trend_detection_agent, trend_prediction_agent, signal_generation_agent = load_agents()
 
-    last_price = data['Close'].iloc[-1]
-    price_change = (data['Close'].iloc[-1] - data['Close'].iloc[0]) / data['Close'].iloc[0] * 100
-    volume = data['Volume'].iloc[-1]
-    
-    prompt = f"""
-    Analyze the following stock data for {symbol}:
-    - Last closing price: ${last_price:.2f}
-    - Price change over the period: {price_change:.2f}%
-    - Latest trading volume: {volume}
+# Sidebar
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Home", "Technical Analysis", "Trend Analysis", "Signal Generation"])
 
-    Please provide a brief analysis of this stock based on these metrics. 
-    Consider factors like recent performance, volume trends, and potential future outlook.
-    Limit your response to 3-4 sentences.
-    """
-
-    try:
-        response = gpt_model.invoke([HumanMessage(content=prompt)])
-        return response.content
-    except Exception as e:
-        return f"An error occurred while generating AI analysis: {str(e)}"
-
-# Streamlit UI
-st.title("Advanced Stock Analysis System")
+# Main content
+st.title("Advanced Stock Analysis System 📈")
 
 # Input field to choose stock symbol
 symbol = st.text_input("Enter Stock Symbol:", value="AAPL")
 
+@st.cache_data
+def load_data(symbol):
+    return data_fetcher.get_stock_data(symbol)
+
 try:
-    # Initialize the DataFetcher and retrieve the data
-    data = data_fetcher.get_stock_data(symbol)
+    data = load_data(symbol)
 
-    # Display the original data
-    st.write(f"Original Stock Data for {symbol}:")
-    st.dataframe(data.tail())
+    if page == "Home":
+        st.header(f"Overview for {symbol}")
+        
+        # Display basic stock info
+        stock = yf.Ticker(symbol)
+        info = stock.info
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Current Price", f"${info.get('currentPrice', 'N/A')}")
+        col2.metric("Market Cap", f"${info.get('marketCap', 'N/A'):,}")
+        col3.metric("52 Week High", f"${info.get('fiftyTwoWeekHigh', 'N/A')}")
 
-    # Technical Analysis Section
-    st.header("Technical Analysis")
+        # Plot stock price
+        fig = go.Figure()
+        fig.add_trace(go.Candlestick(x=data.index,
+                open=data['Open'],
+                high=data['High'],
+                low=data['Low'],
+                close=data['Close'],
+                name='Price'))
+        fig.update_layout(title=f"{symbol} Stock Price", xaxis_title="Date", yaxis_title="Price")
+        st.plotly_chart(fig, use_container_width=True)
 
-    if st.button("Calculate SMA"):
-        try:
-            period = st.number_input("Enter SMA period:", min_value=1, max_value=100, value=14)
-            sma_indicator = SMAIndicator(period=period)
-            data_with_sma = sma_indicator.calculate(data)
-            st.write(f"Stock Data with SMA{period} for {symbol}:")
-            st.dataframe(data_with_sma.tail())
-            sma_analysis = sma_indicator.respond(data)
-            st.write(sma_analysis)
-        except Exception as e:
-            st.error(f"Error calculating SMA: {str(e)}")
+        # Display recent data
+        st.subheader("Recent Data")
+        st.dataframe(data.tail())
 
-    if st.button("Calculate RSI"):
-        try:
-            period = st.number_input("Enter RSI period:", min_value=1, max_value=100, value=14)
-            data[f"RSI{period}"] = ta.rsi(data['Close'], length=period)
-            st.write(f"Stock Data with RSI{period} for {symbol}:")
-            st.dataframe(data.tail())
-        except Exception as e:
-            st.error(f"Error calculating RSI: {str(e)}")
+    elif page == "Technical Analysis":
+        st.header("Technical Analysis")
 
-    # Trend Prediction Section
-    st.header("Trend Prediction")
+        col1, col2 = st.columns(2)
 
-    if st.button("Predict Trend"):
-        if len(data) < 100:
-            st.warning("Not enough data for trend prediction. Please fetch more historical data.")
-        else:
-            try:
+        with col1:
+            if st.button("Calculate SMA"):
+                period = st.slider("SMA Period", min_value=5, max_value=200, value=50)
+                sma_indicator.period = period
+                data_with_sma = sma_indicator.calculate(data)
+                sma_column = f"SMA_{period}"
+                
+                if sma_column not in data_with_sma.columns:
+                    st.error(f"SMA column '{sma_column}' not found. Available columns: {', '.join(data_with_sma.columns)}")
+                else:
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close Price'))
+                    fig.add_trace(go.Scatter(x=data.index, y=data_with_sma[sma_column], name=f'SMA{period}'))
+                    fig.update_layout(title=f"SMA{period} Analysis", xaxis_title="Date", yaxis_title="Price")
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    analysis = sma_indicator.analyze(data_with_sma)
+                    st.markdown(f"**SMA Analysis:**")
+                    st.markdown(f"- Trend: {analysis['trend']}")
+                    st.markdown(f"- Current Price: ${analysis['current_price']:.2f}")
+                    st.markdown(f"- SMA Value: ${analysis['sma_value']:.2f}")
+
+        with col2:
+            if st.button("Calculate RSI"):
+                period = st.slider("RSI Period", min_value=5, max_value=50, value=14)
+                rsi_indicator.period = period
+                data_with_rsi = rsi_indicator.calculate(data)
+                rsi_column = f"RSI_{period}"
+                
+                if rsi_column not in data_with_rsi.columns:
+                    st.error(f"RSI column '{rsi_column}' not found. Available columns: {', '.join(data_with_rsi.columns)}")
+                else:
+                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1, row_heights=[0.7, 0.3])
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close Price'), row=1, col=1)
+                    fig.add_trace(go.Scatter(x=data.index, y=data_with_rsi[rsi_column], name=f'RSI{period}'), row=2, col=1)
+                    fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
+                    fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
+                    fig.update_layout(title=f"RSI{period} Analysis", xaxis_title="Date", yaxis_title="Price")
+                    fig.update_yaxes(title_text="RSI", range=[0, 100], row=2, col=1)
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    analysis = rsi_indicator.analyze(data_with_rsi)
+                    st.markdown(f"**RSI Analysis:**")
+                    st.markdown(f"- Condition: {analysis['condition']}")
+                    st.markdown(f"- Current Price: ${analysis['current_price']:.2f}")
+                    st.markdown(f"- RSI Value: {analysis['rsi_value']:.2f}")
+
+    elif page == "Trend Analysis":
+        st.header("Trend Analysis")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("Detect Trend"):
+                detected_trend = trend_detection_agent.analyze_trend(data)
+                trend_strength = trend_detection_agent.get_trend_strength(data)
+                trend_duration = trend_detection_agent.get_trend_duration(data)
+                st.markdown(f"<p class='big-font'>Detected Trend: {detected_trend}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='big-font'>Trend Strength: {trend_strength:.2f}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='big-font'>Trend Duration: {trend_duration} periods</p>", unsafe_allow_html=True)
+
+        with col2:
+            if st.button("Predict Trend"):
                 with st.spinner("Training models and predicting trend..."):
-                    # Train ARIMA model
-                    trend_prediction_agent.train_arima(data)
-                    arima_trend, arima_forecast = trend_prediction_agent.predict_trend(data, model_type='arima')
+                    arima_trend, arima_confidence, arima_forecast = trend_prediction_agent.predict_trend(data, model_type='arima')
+                    lstm_trend, lstm_confidence, lstm_forecast = trend_prediction_agent.predict_trend(data, model_type='lstm')
                     
-                    # Train LSTM model
-                    trend_prediction_agent.train_lstm(data)
-                    lstm_trend, lstm_prediction = trend_prediction_agent.predict_trend(data, model_type='lstm')
+                    st.markdown(f"<p class='big-font'>ARIMA predicts: {arima_trend} (Confidence: {arima_confidence:.2f})</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p class='big-font'>LSTM predicts: {lstm_trend} (Confidence: {lstm_confidence:.2f})</p>", unsafe_allow_html=True)
                     
-                    st.write(f"ARIMA predicts: {arima_trend}")
-                    st.write(f"LSTM predicts: {lstm_trend}")
-                    
-                    # Plot forecasts
-                    st.subheader("ARIMA Forecast")
-                    last_date = data.index[-1]
-                    forecast_index = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=len(arima_forecast))
-                    forecast_df = pd.DataFrame({'Forecast': arima_forecast}, index=forecast_index)
-                    plot_df = pd.concat([data['Close'].rename('Actual')[-30:], forecast_df])
-                    st.line_chart(plot_df)
-                    
-                    st.subheader("LSTM Forecast")
-                    future_dates = pd.date_range(start=data.index[-1], periods=31, freq='D')[1:]
-                    lstm_forecast = pd.Series(lstm_prediction, index=future_dates)
-                    lstm_plot_df = pd.concat([data['Close'].rename('Actual')[-30:], lstm_forecast.rename('Forecast')])
-                    st.line_chart(lstm_plot_df)
-            except Exception as e:
-                st.error(f"Error predicting trend: {str(e)}")
+                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1, subplot_titles=("ARIMA Forecast", "LSTM Forecast"))
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Actual'), row=1, col=1)
+                    fig.add_trace(go.Scatter(x=arima_forecast.index, y=arima_forecast, name='ARIMA Forecast'), row=1, col=1)
+                    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Actual'), row=2, col=1)
+                    fig.add_trace(go.Scatter(x=lstm_forecast.index, y=lstm_forecast, name='LSTM Forecast'), row=2, col=1)
+                    fig.update_layout(height=800, title_text="Trend Forecasts")
+                    st.plotly_chart(fig, use_container_width=True)
 
-    if st.button("Evaluate Models"):
-        try:
-            with st.spinner("Evaluating models..."):
-                arima_rmse = trend_prediction_agent.evaluate_model(data, model_type='arima')
-                lstm_rmse = trend_prediction_agent.evaluate_model(data, model_type='lstm')
+    elif page == "Signal Generation":
+        st.header("Signal Generation")
+
+        if st.button("Generate Trading Signal"):
+            with st.spinner("Generating trading signal..."):
+                signal = signal_generation_agent.generate_signal(data, symbol)
+                st.markdown("<p class='big-font'>Trading Signal:</p>", unsafe_allow_html=True)
+                st.write(signal_generation_agent.format_signal_response(signal))
                 
-                st.write(f"ARIMA RMSE: {arima_rmse:.2f}")
-                st.write(f"LSTM RMSE: {lstm_rmse:.2f}")
-        except Exception as e:
-            st.error(f"Error evaluating models: {str(e)}")
-
-    if st.button("Optimize Models"):
-        try:
-            with st.spinner("Optimizing models... This may take a while."):
-                best_arima_params = trend_prediction_agent.optimize_model(data, model_type='arima')
-                best_lstm_params = trend_prediction_agent.optimize_model(data, model_type='lstm')
-                
-                st.write("Best ARIMA parameters:")
-                st.write(best_arima_params)
-                st.write("Best LSTM parameters:")
-                st.write(best_lstm_params)
-        except Exception as e:
-            st.error(f"Error optimizing models: {str(e)}")
-
-            
-
-    # AI Analysis Section
-    st.header("AI-Powered Analysis")
-
-    if st.button("Get AI Analysis"):
-        try:
-            with st.spinner("Generating AI analysis..."):
-                analysis = generate_ai_analysis(data, symbol)
-                st.write("AI Analysis:")
-                st.write(analysis)
-        except Exception as e:
-            st.error(f"Error generating AI analysis: {str(e)}")
-
-    # Add a button to fetch the latest data for the selected symbol
-    if st.button("Fetch Latest Data"):
-        try:
-            latest_data = data_fetcher.get_stock_data(symbol)
-            st.write(f"Latest Stock Data for {symbol}:")
-            st.dataframe(latest_data.tail())
-        except Exception as e:
-            st.error(f"Error fetching latest data: {str(e)}")
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=data.index, y=data['Close'], name='Close Price'))
+                fig.add_hline(y=signal['price'], line_dash="dash", line_color="red", annotation_text="Current Price")
+                if signal['stop_loss']:
+                    fig.add_hline(y=signal['stop_loss'], line_dash="dot", line_color="orange", annotation_text="Stop Loss")
+                if signal['take_profit']:
+                    fig.add_hline(y=signal['take_profit'], line_dash="dot", line_color="green", annotation_text="Take Profit")
+                fig.update_layout(title=f"Trading Signal for {symbol}", xaxis_title="Date", yaxis_title="Price")
+                st.plotly_chart(fig, use_container_width=True)
 
 except Exception as e:
-    st.error(f"An error occurred while fetching data for {symbol}: {str(e)}")
+    st.error(f"An error occurred: {str(e)}")
+
+# Footer
+st.markdown("---")
+st.markdown("Developed with ❤️ using Streamlit")

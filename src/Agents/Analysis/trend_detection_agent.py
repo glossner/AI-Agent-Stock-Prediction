@@ -1,181 +1,142 @@
+from src.Agents.base_agent import BaseAgent
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
-import logging
+from pydantic import Field
 
-logger = logging.getLogger(__name__)
+class TrendDetectionAgent(BaseAgent):
+    indicators: dict = Field(default_factory=lambda: {
+        'sma': lambda data, window=50: ta.sma(data['Close'], length=window),
+        'ema': lambda data, window=20: ta.ema(data['Close'], length=window),
+        'macd': lambda data: ta.macd(data['Close']),
+        'rsi': lambda data, window=14: ta.rsi(data['Close'], length=window)
+    })
 
-class TrendDetectionAgent:
-    def __init__(self):
-        self.indicators = {
-            'sma': self.calculate_sma,
-            'ema': self.calculate_ema,
-            'macd': self.calculate_macd,
-            'rsi': self.calculate_rsi
-        }
+    class Config:
+        arbitrary_types_allowed = True
 
-    def calculate_sma(self, data, window=50):
+    def __init__(self, **data):
+        super().__init__(
+            role='Trend Detection Agent',
+            goal='Analyze market trends using multiple indicators',
+            backstory='Expert in combining various technical indicators for comprehensive trend analysis',
+            **data
+        )
+
+    def analyze_trend(self, data: pd.DataFrame) -> str:
         try:
-            if len(data) < window:
-                logger.warning(f"Not enough data points for SMA calculation. Required: {window}, Available: {len(data)}")
-                return None
-            return ta.sma(data['Close'], length=window)
-        except Exception as e:
-            logger.error(f"Error calculating SMA: {str(e)}")
-            return None
+            sma = self.indicators['sma'](data)
+            ema = self.indicators['ema'](data)
+            macd = self.indicators['macd'](data)
+            rsi = self.indicators['rsi'](data)
 
-    def calculate_ema(self, data, window=20):
-        try:
-            if len(data) < window:
-                logger.warning(f"Not enough data points for EMA calculation. Required: {window}, Available: {len(data)}")
-                return None
-            return ta.ema(data['Close'], length=window)
-        except Exception as e:
-            logger.error(f"Error calculating EMA: {str(e)}")
-            return None
+            last_close = data['Close'].iloc[-1]
+            sma_last = sma.iloc[-1]
+            ema_last = ema.iloc[-1]
+            macd_last = macd['MACD_12_26_9'].iloc[-1]
+            signal_last = macd['MACDs_12_26_9'].iloc[-1]
+            rsi_last = rsi.iloc[-1]
 
-    def calculate_macd(self, data):
-        try:
-            if len(data) < 26:  # Minimum required for MACD
-                logger.warning(f"Not enough data points for MACD calculation. Required: 26, Available: {len(data)}")
-                return None, None
-            macd = ta.macd(data['Close'])
-            return macd['MACD_12_26_9'], macd['MACDs_12_26_9']
-        except Exception as e:
-            logger.error(f"Error calculating MACD: {str(e)}")
-            return None, None
+            trend_signals = []
 
-    def calculate_rsi(self, data, window=14):
-        try:
-            if len(data) < window:
-                logger.warning(f"Not enough data points for RSI calculation. Required: {window}, Available: {len(data)}")
-                return None
-            return ta.rsi(data['Close'], length=window)
-        except Exception as e:
-            logger.error(f"Error calculating RSI: {str(e)}")
-            return None
-
-    def detect_trend(self, data, method='sma'):
-        if not isinstance(data, pd.DataFrame) or data.empty:
-            logger.error("Invalid or empty DataFrame")
-            return pd.Series(index=data.index if isinstance(data, pd.DataFrame) else pd.Index([]))
-
-        if 'Close' not in data.columns:
-            logger.error("DataFrame must contain a 'Close' column")
-            return pd.Series(index=data.index)
-
-        if method not in self.indicators:
-            logger.error(f"Invalid trend detection method: {method}")
-            return pd.Series(index=data.index)
-
-        indicator = self.indicators[method](data)
-
-        if indicator is None:
-            logger.warning(f"Indicator calculation failed for method: {method}")
-            return pd.Series(index=data.index)
-
-        if method in ['sma', 'ema']:
-            trend = np.where(data['Close'] > indicator, 1, -1)
-        elif method == 'macd':
-            macd, signal = indicator
-            if macd is None or signal is None:
-                return pd.Series(index=data.index)
-            trend = np.where(macd > signal, 1, -1)
-        elif method == 'rsi':
-            trend = np.where(indicator > 70, -1, np.where(indicator < 30, 1, 0))
-        else:
-            trend = np.zeros(len(data))
-
-        return pd.Series(trend, index=data.index)
-
-    def analyze_trend(self, data, methods=['sma', 'ema', 'macd', 'rsi']):
-        if not isinstance(data, pd.DataFrame) or data.empty:
-            logger.error("Invalid or empty DataFrame")
-            return "Indeterminate"
-
-        trends = {}
-        for method in methods:
-            trend = self.detect_trend(data, method)
-            if not trend.empty and not trend.isnull().all():
-                trends[method] = trend
-
-        if not trends:
-            logger.warning("No valid trends detected")
-            return "Indeterminate"
-
-        combined_trend = pd.DataFrame(trends)
-        if combined_trend.empty:
-            logger.warning("Combined trend DataFrame is empty")
-            return "Indeterminate"
-        
-        mode_result = combined_trend.mode(axis=1)
-        if mode_result.empty or mode_result.iloc[-1].empty:
-            logger.warning("Mode calculation resulted in empty DataFrame")
-            return "Indeterminate"
-        
-        last_trend = mode_result.iloc[-1, 0]
-        if last_trend == 1:
-            return "Uptrend"
-        elif last_trend == -1:
-            return "Downtrend"
-        else:
-            return "Sideways"
-
-    def get_trend_strength(self, data, method='sma'):
-        trend = self.detect_trend(data, method)
-        if trend.empty:
-            return 0
-        return abs(trend.mean())
-
-    def get_trend_duration(self, data, method='sma'):
-        trend = self.detect_trend(data, method)
-        if trend.empty:
-            return 0
-        current_trend = trend.iloc[-1]
-        duration = 0
-        for i in range(len(trend) - 1, -1, -1):
-            if trend.iloc[i] == current_trend:
-                duration += 1
+            if last_close > sma_last and last_close > ema_last:
+                trend_signals.append(1)
+            elif last_close < sma_last and last_close < ema_last:
+                trend_signals.append(-1)
             else:
-                break
-        return duration
+                trend_signals.append(0)
 
-    def analyze_volume_trend(self, data):
-        if 'Volume' not in data.columns:
-            logger.error("DataFrame must contain a 'Volume' column")
-            return pd.Series(index=data.index)
-        volume_sma = ta.sma(data['Volume'], length=20)
-        volume_trend = np.where(data['Volume'] > volume_sma, 1, -1)
-        return pd.Series(volume_trend, index=data.index)
-
-    def detect_trend_breakout(self, data, window=20):
-        sma = self.calculate_sma(data, window)
-        if sma is None:
-            return pd.Series(index=data.index)
-        breakout_up = (data['Close'] > sma) & (data['Close'].shift(1) <= sma.shift(1))
-        breakout_down = (data['Close'] < sma) & (data['Close'].shift(1) >= sma.shift(1))
-        return pd.Series(np.where(breakout_up, 1, np.where(breakout_down, -1, 0)), index=data.index)
-
-    def get_trend_reversal_points(self, data, method='sma'):
-        trend = self.detect_trend(data, method)
-        reversal_points = []
-        for i in range(1, len(trend)):
-            if trend.iloc[i] != trend.iloc[i-1]:
-                reversal_points.append(data.index[i])
-        return reversal_points
-
-    def analyze_multiple_timeframes(self, data, timeframes=['1D', '1W', '1M']):
-        trends = {}
-        for timeframe in timeframes:
-            resampled_data = data.resample(timeframe).agg({
-                'Open': 'first', 
-                'High': 'max', 
-                'Low': 'min', 
-                'Close': 'last',
-                'Volume': 'sum'
-            }).dropna()
-            if not resampled_data.empty:
-                trends[timeframe] = self.analyze_trend(resampled_data)
+            if macd_last > signal_last:
+                trend_signals.append(1)
+            elif macd_last < signal_last:
+                trend_signals.append(-1)
             else:
-                trends[timeframe] = "Insufficient data"
-        return trends
+                trend_signals.append(0)
+
+            if rsi_last > 70:
+                trend_signals.append(-1)
+            elif rsi_last < 30:
+                trend_signals.append(1)
+            else:
+                trend_signals.append(0)
+
+            avg_signal = np.mean(trend_signals)
+
+            if avg_signal > 0.3:
+                return "Uptrend"
+            elif avg_signal < -0.3:
+                return "Downtrend"
+            else:
+                return "Sideways"
+        except Exception as e:
+            print(f"Error in analyze_trend: {str(e)}")
+            return "Unknown"
+
+    def get_trend_strength(self, data: pd.DataFrame) -> float:
+        try:
+            trend = self.analyze_trend(data)
+            rsi = self.indicators['rsi'](data)
+            rsi_last = rsi.iloc[-1]
+
+            if trend == "Uptrend":
+                return min(rsi_last / 100, 1.0)
+            elif trend == "Downtrend":
+                return min((100 - rsi_last) / 100, 1.0)
+            else:
+                return 0.5
+        except Exception as e:
+            print(f"Error in get_trend_strength: {str(e)}")
+            return 0.5
+
+    def get_trend_duration(self, data: pd.DataFrame) -> int:
+        try:
+            current_trend = self.analyze_trend(data)
+            duration = 0
+            for i in range(len(data) - 1, -1, -1):
+                if self.analyze_trend(data.iloc[:i+1]) == current_trend:
+                    duration += 1
+                else:
+                    break
+            return duration
+        except Exception as e:
+            print(f"Error in get_trend_duration: {str(e)}")
+            return 0
+
+    def analyze_volume_trend(self, data: pd.DataFrame) -> pd.Series:
+        try:
+            volume_sma = ta.sma(data['Volume'], length=20)
+            volume_trend = np.where(data['Volume'] > volume_sma, 1, -1)
+            return pd.Series(volume_trend, index=data.index)
+        except Exception as e:
+            print(f"Error in analyze_volume_trend: {str(e)}")
+            return pd.Series(index=data.index)
+
+    def construct_message(self, data: pd.DataFrame) -> str:
+        trend = self.analyze_trend(data)
+        strength = self.get_trend_strength(data)
+        duration = self.get_trend_duration(data)
+        volume_trend = self.analyze_volume_trend(data).iloc[-1]
+
+        return f"""
+        Analyze the following trend data:
+        - Current Trend: {trend}
+        - Trend Strength: {strength:.2f}
+        - Trend Duration: {duration} periods
+        - Volume Trend: {"Increasing" if volume_trend == 1 else "Decreasing"}
+
+        Provide insights on the current market trend based on this analysis.
+        Consider factors like potential reversals and overall market sentiment.
+        Limit your response to 3-4 sentences.
+        """
+
+    def respond(self, data: pd.DataFrame) -> str:
+        try:
+            trend = self.analyze_trend(data)
+            strength = self.get_trend_strength(data)
+            duration = self.get_trend_duration(data)
+            volume_trend = "Increasing" if self.analyze_volume_trend(data).iloc[-1] == 1 else "Decreasing"
+
+            return f"Current Trend: {trend}\nTrend Strength: {strength:.2f}\nTrend Duration: {duration} periods\nVolume Trend: {volume_trend}"
+        except Exception as e:
+            print(f"Error in respond: {str(e)}")
+            return "Unable to analyze trend due to an error."
