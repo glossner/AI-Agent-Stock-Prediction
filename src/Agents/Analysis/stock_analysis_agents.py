@@ -1,21 +1,20 @@
-######################################
-# This code comes from: https://github.com/crewAIInc/crewAI-examples/blob/main/stock_analysis/stock_analysis_agents.py
-# And is licensed under MIT
-######################################
-
 from crewai import Agent
 
 from src.Agents.Analysis.Tools.browser_tools import BrowserTools
 from src.Agents.Analysis.Tools.calculator_tools import CalculatorTools
 from src.Agents.Analysis.Tools.search_tools import SearchTools
 from src.Agents.Analysis.Tools.sec_tools import SECTools
+from src.Agents.Agent_Indicators.indicator_agent_rsi import IndicatorAgentRSI
+from src.Agents.Agent_Indicators.indicator_agent_sma import IndicatorAgentSMA
+from src.Agents.Analysis.trend_detection_agent import TrendDetectionAgent
+from src.Agents.Analysis.trend_prediction_agent import TrendPredictionAgent
+from src.Agents.Analysis.signal_generation_agent import SignalGenerationAgent
 
 from langchain_community.tools import YahooFinanceNewsTool
 from langchain_openai import ChatOpenAI
 
 gpt_model = ChatOpenAI(
   temperature=0,
-  #model_name="gpt-3.5-turbo",
   model_name="gpt-4o"
 )
 
@@ -79,3 +78,20 @@ class StockAnalysisAgents():
         YahooFinanceNewsTool()
       ]
     )
+
+  def rsi_analyst(self):
+    return IndicatorAgentRSI(model="gpt-4o")
+
+  def sma_analyst(self):
+    return IndicatorAgentSMA(model="gpt-4o")
+
+  def trend_detection_analyst(self):
+    return TrendDetectionAgent(model="gpt-4o")
+
+  def trend_prediction_analyst(self):
+    return TrendPredictionAgent(model="gpt-4o")
+
+  def signal_generation_analyst(self):
+    return SignalGenerationAgent(model="gpt-4o")
+  def signal_generation_analyst(self):
+    return SignalGenerationAgent(risk_tolerance='medium')
