@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 class DataFetcher:
-    def __init__(self, start_date: datetime = None):
+    def __init__(self, start_date: datetime = None, end_date: datetime = None):
         """
         Initializes the DataFetcher with a default start date of 30 days ago.
 
@@ -16,7 +16,10 @@ class DataFetcher:
         else:
             self.start_date = start_date
 
-    def get_stock_data(self, symbol: str, start_date: datetime = None) -> pd.DataFrame:
+        if end_date is None:
+            self.end_date = datetime.today()
+
+    def get_stock_data(self, symbol: str, start_date: datetime = None, end_date: datetime = None) -> pd.DataFrame:
         """
         Fetches historical stock data for the given symbol.
 
@@ -31,7 +34,8 @@ class DataFetcher:
         if start_date is None:
             start_date = self.start_date
 
-        end_date = datetime.today()
+        if end_date is None:
+            end_date = datetime.today()
 
         # Format dates as strings
         start_date_str = start_date.strftime('%Y-%m-%d')

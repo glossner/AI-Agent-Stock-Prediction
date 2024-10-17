@@ -79,3 +79,46 @@ class StockAnalysisAgents():
         YahooFinanceNewsTool()
       ]
     )
+
+  
+  def sentiment_analyst(self):
+        return Agent(
+            llm=gpt_model,
+            role='Sentiment Analyst',
+            goal="""Analyze market sentiments from news articles and derive actionable insights for investments.""",
+            backstory="""You're an expert in sentiment analysis, providing insights that help in determining market impact and investment decisions.""",
+            verbose=True,
+            tools=[
+                SearchTools.search_internet,
+                CalculatorTools.calculate
+            ]
+        )
+
+
+  def dividend_forecasting_agent(self, company):
+        return Agent(
+            llm=gpt_model,
+            role=f'Dividend Forecasting Agent for {company}',
+            goal=f"""Provide a detailed dividend growth forecast based on {company}'s
+            income statement and cash flow statement.""",
+            backstory=f"""You are a seasoned financial analyst specializing in dividend
+            forecasting. You are tasked with analyzing {company}'s key financial documents 
+            such as income statements, cash flow statements, and historical dividend payouts 
+            to provide a well-researched dividend growth forecast.""",
+            verbose=True
+        )
+
+    
+  def economic_forecasting_agent(self):
+        return Agent(
+            llm=gpt_model,
+            role='Economic Analyst',
+            goal="""Analyze macroeconomic indicators, government policy changes, and financial reports
+            to predict which sectors are likely to perform well in the coming quarters.""",
+            backstory="""You are an experienced economic analyst, adept at understanding the effects of macroeconomic factors
+            and policy changes on various sectors of the economy. You have access to the latest macroeconomic data and financial reports.""",
+            verbose=True,
+            tools=[]
+        )
+
+
