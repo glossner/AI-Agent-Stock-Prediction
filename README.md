@@ -51,6 +51,11 @@ Else
 conda install -c conda-forge faiss-cpu
 ```
 
+## newspaper3k and supporting libraries
+```sh
+pip install newspaper3k beautifulsoup4 lxml lxml_html_clean
+```
+
 ## Set Environment Variables
 
 Sign up to get an [OpenAI Key](https://platform.openai.com/docs/overview)
@@ -75,3 +80,10 @@ Download the [chromedriver](https://googlechromelabs.github.io/chrome-for-testin
 Place it is a folder named chromedriver in the root directory. This will not be on github because some students need Linux or MAC versions.
 
 Note that it must match the version of Chrome on your computer. You can check it by starting the Chrome browser. Then navigate to on your browser to the top right 3 dots, help->About Chrome. It should say 128.xxxxx.
+
+## Set up back testing 
+
+```sh
+pip install backtrader
+pip install backtrader[plotting]
+```

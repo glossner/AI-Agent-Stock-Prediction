@@ -106,6 +106,124 @@ class StockAnalysisTasks():
             agent=agent,
             expected_output="A comprehensive investment recommendation report, including a detailed analysis and clear investment stance, well-formatted for the customer."
         )
+    def fibonacci_analysis(self, agent, fibonacci_levels):
+        """
+        A new task to handle the Fibonacci retracement analysis by the financial analyst agent.
+        
+        Args:
+            agent (object): The agent responsible for analyzing the Fibonacci levels.
+            fibonacci_levels (dict): The calculated Fibonacci retracement levels.
+        
+        Returns:
+            Task: A CrewAI task for the agent to analyze the Fibonacci retracement report.
+        """
+        # Generate a descriptive report of the Fibonacci levels
+        report = "Fibonacci Analysis Report:\nRetracement Levels:\n"
+        for level, value in fibonacci_levels.items():
+            report += f"{level}: {value}\n"
 
+        # Create the task for the agent to analyze the Fibonacci report
+        return Task(
+            description=dedent(f"""
+                Analyze the following Fibonacci retracement levels for the selected stock.
+                Pay attention to potential support and resistance levels based on these Fibonacci levels.
+                Use these levels to assess the stock's future price movements.
+
+                The Fibonacci retracement levels are as follows:
+
+                {report}
+                
+                Your final answer MUST be a comprehensive analysis of these levels,
+                including potential price targets, support/resistance zones, and
+                any other important considerations.
+
+                Make sure to use the most recent stock data available.
+            """),
+            agent=agent,
+            expected_output="A comprehensive analysis of Fibonacci retracement levels, including price targets and potential support/resistance zones."
+        )
     def __tip_section(self):
         return "If you do your BEST WORK, I'll give you a $10,000 commission!"
+
+      
+    def fetch_news(self, stock_or_sector):
+        return f"Fetching the latest news related to {stock_or_sector}."
+
+    def analyze_sentiment(self, agent, news_data):
+        return Task(
+            description=dedent(f"""
+                Perform sentiment analysis on the latest financial news related to {news_data}.
+                Derive sentiment scores based on the emotional tone and market reaction.
+            """),
+            agent=agent,
+            expected_output="A sentiment score and analysis report on the specified stock or sector."
+        )
+
+    def provide_investment_advice(self, agent, sentiment_data):
+        return Task(
+            description=dedent(f"""
+                Based on the sentiment analysis for {sentiment_data}, provide actionable investment advice.
+                Formulate clear buy/hold/sell recommendations depending on the sentiment's market impact.
+            """),
+            agent=agent,
+            expected_output="Actionable investment advice based on the sentiment score."
+        )
+
+      
+    def forecast_dividend_growth(self, agent, financial_data, company):
+        """
+        Task that uses the dividend forecasting agent to analyze financial data
+        and forecast dividend growth for the specified company.
+        """
+        income_statement = financial_data["IncomeStatement"]
+        cash_flow_statement = financial_data["CashFlowStatement"]
+
+        # Prepare a prompt for the agent based on the financial data
+        prompt = dedent(f"""
+        You are analyzing the financial data for {company}.
+
+        The following financial data is provided:
+
+        Income Statement:
+        {income_statement}
+
+        Cash Flow Statement:
+        {cash_flow_statement}
+
+        Based on {company}'s earnings, cash flow, and dividend payout history, 
+        forecast the potential dividend growth for the next 5 years. 
+        Please include a detailed explanation of your analysis and any 
+        potential risks or assumptions made in the forecast.
+        """)
+
+        # Return a task for CrewAI to process
+        return Task(
+            description=dedent(f"""
+                Analyze {company}'s income statement and cash flow statement 
+                to forecast dividend growth. Focus on earnings, cash flow, 
+                and past dividend payout history.
+            """),
+            agent=agent,
+            prompt=prompt,
+            expected_output=f"A detailed dividend growth forecast report for {company} for the next 5 years, including risks and assumptions.")
+
+    def predict_sector_performance(self, agent, combined_data):
+        return Task(
+            description=dedent(f"""
+                Based on the provided macroeconomic data, financial reports, and recent government policy changes, 
+                analyze the information and predict which sectors are likely to perform well in the upcoming quarters.
+                
+                Your analysis should take into account macroeconomic factors such as GDP growth, inflation rates, and unemployment rates,
+                along with the effect of new government policies on different sectors of the economy.
+                
+                Ensure that your final report includes a detailed breakdown of your predictions and the reasoning behind your analysis.
+                
+                Financial Reports: {combined_data['FinancialReports']}
+                Policy Changes: {combined_data['PolicyChanges']}
+                Macroeconomic Data: {combined_data['MacroeconomicData']}
+            """),
+            agent=agent,
+            expected_output="A detailed report on which sectors are expected to perform well, with a breakdown of the impact of macroeconomic indicators and government policies."
+
+
+        )
