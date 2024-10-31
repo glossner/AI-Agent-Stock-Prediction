@@ -30,3 +30,28 @@ class TimingTradingStrategy(bt.Strategy):
             price = self.data.close[0]
             logging.info(f"{current_date}: SELL {self.position.size} shares at {price:.2f} after earnings release")
 
+
+
+# Main script to execute the backtest
+if __name__ == '__main__':
+    stock = 'AAPL'  # Replace with your stock ticker
+    start = datetime(2010, 1, 1)
+    end = datetime.today()
+
+    # Fetch historical stock data
+    data_fetcher = DataFetcher()
+    earnings_date = data_fetcher.get_earnings_date(stock)
+    print(f"Earnings Date: {earnings_date}")
+
+    yfinance_fetcher = yf.Ticker(stock)
+    data = yfinance_fetcher.history(start=start, end=end)
+    if data.empty:
+        print("No data retrieved for the given stock and date range.")
+    else:
+        # Convert pandas DataFrame to Backtrader data feed
+        data_feed = bt.feeds.PandasData(dataname=data, fromdate=start, todate=end)
+
+        print("*********************************************")
+        print("************* Timing Trading Strategy *******")
+        print("*********************************************")
+        run_backtest(TimingTradingStrategy, stock, data_feed, earnings_date, cash=10000, commission=0.001)
