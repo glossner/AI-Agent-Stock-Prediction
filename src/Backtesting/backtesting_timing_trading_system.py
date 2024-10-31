@@ -30,7 +30,41 @@ class TimingTradingStrategy(bt.Strategy):
             price = self.data.close[0]
             logging.info(f"{current_date}: SELL {self.position.size} shares at {price:.2f} after earnings release")
 
+# Backtesting function with performance metrics
+def run_backtest(strategy_class, stock, data_feed, earnings_date, cash=10000, commission=0.001):
+    cerebro = bt.Cerebro()
+    cerebro.addstrategy(strategy_class, stock=stock, earnings_date=earnings_date)
+    cerebro.adddata(data_feed)
+    cerebro.broker.setcash(cash)
+    cerebro.broker.setcommission(commission)
 
+    # Add analyzers for performance metrics
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe', riskfreerate=0.01)
+    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
+
+    result = cerebro.run()
+    strat = result[0]
+
+    # Print performance metrics
+    sharpe = strat.analyzers.sharpe.get_analysis()
+    returns = strat.analyzers.returns.get_analysis()
+    drawdown = strat.analyzers.drawdown.get_analysis()
+    trades = strat.analyzers.trades.get_analysis()
+
+    print("\nPerformance Metrics:")
+    print(f"Sharpe Ratio: {sharpe.get('sharperatio', 'N/A')}")
+    print(f"Total Return: {returns['rtot']*100:.2f}%")
+    print(f"Average Daily Return: {returns['ravg']*100:.2f}%")
+    print(f"Max Drawdown: {drawdown.drawdown*100:.2f}%")
+    print(f"Max Drawdown Duration: {drawdown.get('maxdrawdownperiod', 'N/A')} days")
+    print(f"Total Trades: {trades.total.total if 'total' in trades.total else 'N/A'}")
+    print(f"Winning Trades: {trades.won.total if 'won' in trades else 'N/A'}")
+    print(f"Losing Trades: {trades.lost.total if 'lost' in trades else 'N/A'}")
+    print(f"Net Profit: {returns['rtot'] * 100:.2f}%")
+
+    cerebro.plot()
 
 # Main script to execute the backtest
 if __name__ == '__main__':
