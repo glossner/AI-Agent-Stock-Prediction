@@ -1,27 +1,39 @@
 from crewai import Agent
 from src.Agents.base_agent import BaseAgent
+from textwrap import dedent
+from crewai import Task
 
 class VWAPAnalysisAgent(BaseAgent):
+    def __init__(self, **kwargs):
+        super().__init__(
+            role='VWAP Trading Advisor',
+            goal="Analyze VWAP data to provide trading insights based on market momentum and institutional investor activity.",
+            backstory="You are an expert market analyst specializing in VWAP analysis, helping traders make decisions based on institutional activity and market momentum.",
+            verbose=True,
+            tools=[], 
+            allow_delegation=False,
+            **kwargs
+        )
+    
     def vwap_trading_advisor(self):
         return Agent(
-            role='VWAP Trading Advisor',
-            goal="""Analyze VWAP data and provide actionable insights on stock price movement and 
-            market momentum based on volume-weighted price. Assist in identifying optimal entry 
-            and exit points for trading based on VWAP analysis.""",
-            backstory="""This agent specializes in VWAP analysis to assist traders in making decisions 
-            based on institutional activity and market sentiment.""",
-            verbose=True
+            role=self.role,
+            goal=self.goal,
+            backstory=self.backstory,
+            verbose=self.verbose,
+            tools=self.tools,
+            allow_delegation=self.allow_delegation
         )
 
     def vwap_analysis(self, agent, vwap_data):
-        description = f"""
+        description = dedent(f"""
             Analyze the provided VWAP data, which represents the average price at which a stock 
-            has traded throughout the day based on volume. Based on this VWAP data, provide 
-            trading recommendations that reflect the current market sentiment. 
+            has traded throughout the day based on volume. Provide trading recommendations 
+            reflecting the current market sentiment. 
             VWAP Data:
             - VWAP: {vwap_data['VWAP'].iloc[-1]}
             - Closing Price: {vwap_data['Close'].iloc[-1]}
-        """
+        """)
         return Task(
             description=description,
             agent=agent,
