@@ -1,197 +1,223 @@
-import os
-import pandas as pd
-import requests
 import backtrader as bt
-from yahooquery import Ticker
+import yfinance as yf
+import pandas as pd
 from dotenv import load_dotenv
-from crewai import Crew, Agent, Task
-from langchain_openai import ChatOpenAI
-from textwrap import dedent
+import os
+from src.Agents.Earnings_Calls_Sec_Filings_Agents.earnings_sec_analysis_agents import EarningsSecAnalysisAgents
+from crewai import Crew
+import sys
+import requests
 
-# Load API keys
+# Load environment variables
 load_dotenv()
-EARNINGSCAST_API_KEY = os.getenv("EARNINGSCAST_API_KEY", "demo")
 
-# Initialize the GPT model
-gpt_model = ChatOpenAI(
-    temperature=0,
-    model_name="gpt-4"
-)
+class CrewAIEarningsCallsStrategy(bt.Strategy):
+    params = dict(
+        company='AAPL',
+        exchange='NASDAQ',
+        data_df=None,
+        printlog=True,
+    )
 
-# Define EarningsSecAnalysisAgents
-class EarningsSecAnalysisAgents:
-    def financial_analyst(self):
-        return Agent(
-            llm=gpt_model,
-            role='Financial Analyst',
-            goal="Provide concise analysis based on SEC filings and earnings calls to guide a single investment decision.",
-            backstory="You are an expert financial analyst with deep knowledge of market trends and SEC regulations.",
-            verbose=True
-        )
+    def __init__(self):
+        self.dataclose = self.datas[0].close
+        self.order = None
 
-    def analyze_sec_filings(self, agent, sec_data):
-        key_sections = ["Risk Factors", "Financial Data", "Management's Discussion and Analysis"]
-        tasks = []
-        
-        for section in key_sections:
-            if section in sec_data:
-                sec_text = sec_data[section][:1000]  # Limit each section to 1000 chars if necessary
-                task = Task(
-                    description=dedent(f"""
-                        Provide a brief analysis of potential risks and opportunities from the {section} section of SEC filings.
-                        Key financial trends and highlights only.
-                        {section} Data: {sec_text}
-                    """),
-                    agent=agent,
-                    expected_output=f"A concise analysis of the {section} section."
-                )
-                tasks.append(task)
-        
-        return tasks
+        # Initialize Earnings Calls and SEC Filings Agents and Tasks
+        self.sec_earnings_agents = EarningsSecAnalysisAgents()
+        self.financial_analyst_agent = self.sec_earnings_agents.financial_analyst()
 
-    def analyze_earnings_calls(self, agent, earnings_data):
-        trimmed_earnings_data = earnings_data[:1000]  # Limit data to the first 1000 characters
-        return Task(
-            description=dedent(f"""
-                Summarize any notable market insights or guidance from the earnings call.
-                Key highlights only.
-                Earnings Data: {trimmed_earnings_data}
-            """),
-            agent=agent,
-            expected_output="A brief earnings call analysis with key insights into company performance and outlook."
-        )
+        # Fetch earnings call dates
+        self.fetch_earnings_calls()
 
-# FinancialCrew class for fetching and analyzing data
-class FinancialCrew:
-    def __init__(self, company, exchange):
-        self.company = company
-        self.exchange = exchange
-        self.earnings_api_key = EARNINGSCAST_API_KEY
+        # Initialize crew output
+        self.crew_output = {}
 
     def fetch_sec_filings(self):
-        ticker = Ticker(self.company)
+        from yahooquery import Ticker
+        ticker = Ticker(self.params.company)
         sec_filings = ticker.sec_filings
         if sec_filings.empty:
             print("No SEC filings found for the company.")
             return None
-        return sec_filings.to_dict()
+        return sec_filings.to_json()
 
     def fetch_earnings_calls(self):
-        url = f'https://v2.api.earningscall.biz/events?apikey={self.earnings_api_key}&exchange={self.exchange}&symbol={self.company}'
+        url = f'https://v2.api.earningscall.biz/events?apikey={os.getenv("EARNINGSCAST_API_KEY")}&exchange={self.params.exchange}&symbol={self.params.company}'
         response = requests.get(url)
         if response.status_code == 200:
-            earnings_data = response.json()
-            return earnings_data[0] if isinstance(earnings_data, list) and earnings_data else None
+            data = response.json()
+            print("API Response:", data)  # Debugging line
+            events = data.get('events', [])
+            if not events:
+                print("No earnings events found.")
+                self.earnings_call_dates = []
+                self.earnings_data = None
+                return
+            # Extract dates
+            event_dates = [event['date'] for event in events]
+            self.earnings_call_dates = pd.to_datetime(event_dates).date
+            self.earnings_data = events
         else:
             print("Error fetching earnings calls:", response.status_code)
-            return None
+            self.earnings_call_dates = []
+            self.earnings_data = None
 
-    def analyze_single_signal(self):
-        agents = EarningsSecAnalysisAgents()
-        financial_analyst = agents.financial_analyst()
-
+    def perform_crewai_analysis(self):
         sec_data = self.fetch_sec_filings()
-        earnings_data = self.fetch_earnings_calls()
+        earnings_data = self.earnings_data
 
-        signal = None
-        signal_date = None
+        if not sec_data and not earnings_data:
+            print("No data available for analysis.")
+            return
 
-        if sec_data:
-            sec_analysis_tasks = agents.analyze_sec_filings(financial_analyst, sec_data)
-            sec_analysis_result = ""
-            for task in sec_analysis_tasks:
-                crew = Crew(agents=[financial_analyst], tasks=[task], verbose=True)
-                result = crew.kickoff()
-                sec_analysis_result += getattr(result, 'text', '') or getattr(result, 'output', '')
+        # Re-initialize tasks
+        self.sec_filings_task = self.sec_earnings_agents.analyze_sec_filings(
+            self.financial_analyst_agent, sec_data)
+        self.earnings_call_task = self.sec_earnings_agents.analyze_earnings_calls(
+            self.financial_analyst_agent, earnings_data)
 
-            if sec_analysis_result:
-                signal = self.determine_signal(sec_analysis_result)
-                signal_date = pd.to_datetime("today").date()
-        elif earnings_data:
-            earnings_analysis_task = agents.analyze_earnings_calls(financial_analyst, earnings_data)
-            crew = Crew(agents=[financial_analyst], tasks=[earnings_analysis_task], verbose=True)
-            result = crew.kickoff()
-            earnings_analysis_result = getattr(result, 'text', '') or getattr(result, 'output', '')
-            if earnings_analysis_result:
-                signal = self.determine_signal(earnings_analysis_result)
-                signal_date = pd.to_datetime("today").date()
+        # Re-run CrewAI agents
+        crew = Crew(
+            agents=[self.financial_analyst_agent],
+            tasks=[self.sec_filings_task, self.earnings_call_task],
+            verbose=True
+        )
+        self.crew_output = crew.kickoff()
 
-        if signal:
-            print(f"Generated single signal: {signal} on {signal_date}")
-            return {'date': signal_date, 'signal': signal}
+    def get_recommendation_from_crew_output(self):
+        # Simple keyword-based sentiment analysis
+        analysis_text = ''
+        for key in self.crew_output:
+            analysis_text += self.crew_output[key]
+
+        analysis_text = analysis_text.lower()
+
+        if 'buy' in analysis_text or 'strong growth' in analysis_text or 'positive outlook' in analysis_text:
+            return 'buy'
+        elif 'sell' in analysis_text or 'decline' in analysis_text or 'negative outlook' in analysis_text:
+            return 'sell'
         else:
-            print("No valid signal generated.")
-            return None
-
-    def determine_signal(self, analysis_result):
-        if 'positive' in analysis_result.lower():
-            return 'Buy'
-        elif 'negative' in analysis_result.lower():
-            return 'Sell'
-        else:
-            return 'Hold'
-
-# Backtrader strategy using crewAI agent single in-memory signal
-class CrewAIStrategy(bt.Strategy):
-    params = (('signal_data', None),)
-
-    def __init__(self):
-        self.signal_data = self.params.signal_data
-        self.dataclose = self.datas[0].close
+            return 'hold'
 
     def next(self):
-        if self.signal_data:
-            signal_date = self.signal_data['date']
-            signal = self.signal_data['signal']
-            
-            if self.datas[0].datetime.date(0) == signal_date:
-                if signal == 'Buy' and not self.position:
-                    self.buy()
-                    print(f"{signal_date} - Buy at {self.dataclose[0]:.2f}")
-                elif signal == 'Sell' and self.position:
-                    self.close()
-                    print(f"{signal_date} - Sell at {self.dataclose[0]:.2f}")
-                self.signal_data = None
+        current_date = self.datas[0].datetime.date(0)
 
-# Function to run single trade backtest
-def run_single_trade_backtest(company_symbol, exchange):
-    financial_crew = FinancialCrew(company_symbol, exchange)
-    single_signal = financial_crew.analyze_single_signal()
+        if current_date in self.earnings_call_dates:
+            self.perform_crewai_analysis()
 
-    if not single_signal:
-        print("No signal generated. Exiting backtest.")
-        return
+        # Get recommendation
+        recommendation = self.get_recommendation_from_crew_output()
 
+        # Make trading decisions based on the new analysis
+        close_price = self.dataclose[0]
+        if recommendation == 'buy' and not self.position:
+            self.order = self.buy()
+            if self.params.printlog:
+                self.log(f'BUY CREATE, {close_price:.2f}')
+        elif recommendation == 'sell' and self.position:
+            self.order = self.sell()
+            if self.params.printlog:
+                self.log(f'SELL CREATE, {close_price:.2f}')
+
+    def log(self, txt, dt=None):
+        dt = dt or self.datas[0].datetime.date(0)
+        print(f'{dt.isoformat()} {txt}')
+
+    def notify_order(self, order):
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log(f'BUY EXECUTED, Price: {order.executed.price:.2f}')
+            elif order.issell():
+                self.log(f'SELL EXECUTED, Price: {order.executed.price:.2f}')
+        self.order = None
+
+    def notify_trade(self, trade):
+        if trade.isclosed:
+            self.log(f'OPERATION PROFIT, GROSS {trade.pnl:.2f}, NET {trade.pnlcomm:.2f}')
+
+
+
+def run_strategy(strategy_class, strategy_name, data_df, company=None, exchange=None):
     cerebro = bt.Cerebro()
-
-    signal_date = single_signal['date']
-    start_date = signal_date - pd.Timedelta(days=5)
-    end_date = signal_date + pd.Timedelta(days=5)
-
-    data = bt.feeds.YahooFinanceData(
-        dataname=company_symbol,
-        fromdate=start_date,
-        todate=end_date,
-        reverse=False
-    )
-
-    cerebro.adddata(data)
-    cerebro.addstrategy(CrewAIStrategy, signal_data=single_signal)
     cerebro.broker.setcash(100000.0)
+    cerebro.broker.setcommission(commission=0.001)
 
-    print("Starting backtest for a single trade...")
-    cerebro.run()
-    print("Backtest completed.")
+    data = bt.feeds.PandasData(
+        dataname=data_df,
+        datetime=None,
+        open='Open',
+        high='High',
+        low='Low',
+        close='Close',
+        volume='Volume',
+        openinterest=-1
+    )
+    cerebro.adddata(data)
 
-    portvalue = cerebro.broker.getvalue()
-    pnl = portvalue - 100000.0
+    if company:
+        cerebro.addstrategy(strategy_class, company=company, exchange=exchange, data_df=data_df, printlog=True)
+    else:
+        cerebro.addstrategy(strategy_class, data_df=data_df, printlog=True)
 
-    print(f"Final Portfolio Value: ${portvalue:,.2f}")
-    print(f"Net P/L for single trade: ${pnl:,.2f}")
-    cerebro.plot(style='candlestick')
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    cerebro.addanalyzer(bt.analyzers.TimeReturn, timeframe=bt.TimeFrame.NoTimeFrame, _name='timereturn')
 
-# Entry point
+    print(f'\nRunning {strategy_name}...')
+    print(f'Starting Portfolio Value: {cerebro.broker.getvalue():.2f}')
+    results = cerebro.run()
+    strat = results[0]
+    print(f'Final Portfolio Value: {cerebro.broker.getvalue():.2f}')
+
+    sharpe = strat.analyzers.sharpe.get_analysis()
+    drawdown = strat.analyzers.drawdown.get_analysis()
+    timereturn = strat.analyzers.timereturn.get_analysis()
+
+    strategy_returns = pd.Series(timereturn)
+    cumulative_return = (strategy_returns + 1.0).prod() - 1.0
+    start_date = data_df.index[0]
+    end_date = data_df.index[-1]
+    num_years = (end_date - start_date).days / 365.25
+    annual_return = (1 + cumulative_return) ** (1 / num_years) - 1 if num_years != 0 else 0.0
+
+    print(f'\n{strategy_name} Performance Metrics:')
+    print('----------------------------------------')
+    print(f"Sharpe Ratio: {sharpe.get('sharperatio', 'N/A')}")
+    print(f"Total Return: {cumulative_return * 100:.2f}%")
+    print(f"Annual Return: {annual_return * 100:.2f}%")
+    print(f"Max Drawdown: {drawdown.max.drawdown:.2f}%")
+
+    return {
+        'strategy_name': strategy_name,
+        'sharpe_ratio': sharpe.get('sharperatio', 'N/A'),
+        'total_return': cumulative_return * 100,
+        'annual_return': annual_return * 100,
+        'max_drawdown': drawdown.max.drawdown,
+    }
+
 if __name__ == '__main__':
-    company_symbol = 'AAPL'  # Example: Apple Inc.
+    company = 'AAPL'
     exchange = 'NASDAQ'
-    run_single_trade_backtest(company_symbol, exchange)
+    data_df = yf.download(company, start='2020-01-01', end='2024-10-30')
+
+    if data_df.empty:
+        print(f"No price data found for {company}")
+        sys.exit()
+
+    if isinstance(data_df.columns, pd.MultiIndex):
+        data_df.columns = [' '.join(col).strip() for col in data_df.columns.values]
+        data_df.columns = [col.split(' ')[0] for col in data_df.columns]
+
+    if 'Adj Close' in data_df.columns:
+        data_df['Close'] = data_df['Adj Close']
+    data_df = data_df[['Open', 'High', 'Low', 'Close', 'Volume']]
+
+    metrics_crewai = run_strategy(
+        CrewAIEarningsCallsStrategy,
+        'CrewAI Earnings Calls Strategy',
+        data_df.copy(),
+        company,
+        exchange
+    )
+    print(metrics_crewai)
