@@ -1,12 +1,13 @@
 import smtplib
 from email.mime.text import MIMEText
 from twilio.rest import Client
+import os
 
 def send_email_alert(subject, message, recipient_email):
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
-    sender_email = ''
-    sender_password = ''
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_PASSWORD")
 
     msg = MIMEText(message)
     msg['Subject'] = subject
@@ -19,9 +20,9 @@ def send_email_alert(subject, message, recipient_email):
         server.sendmail(sender_email, recipient_email, msg.as_string())
 
 def send_sms_alert(message, recipient_phone):
-    account_sid = ''
-    auth_token = ''
-    from_phone = ''  # Replace with your Twilio phone number
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    from_phone = os.getenv("TWILIO_PHONE_NUMBER")
 
     client = Client(account_sid, auth_token)
     client.messages.create(
@@ -31,9 +32,9 @@ def send_sms_alert(message, recipient_phone):
     )
 
 def send_sms_alert_curl(message, recipient_phone):
-    import os
-    account_sid = ''
-    auth_token = ''
-    from_phone = ''  # Replace with your Twilio phone number
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    from_phone = os.getenv("TWILIO_PHONE_NUMBER")
+    
     command = f"curl 'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json' -X POST --data-urlencode 'To={recipient_phone}' --data-urlencode 'From={from_phone}' --data-urlencode 'Body={message}' -u {account_sid}:{auth_token}"
     os.system(command)
