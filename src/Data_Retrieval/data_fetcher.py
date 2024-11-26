@@ -12,7 +12,7 @@ class DataFetcher:
         """
         if start_date is None:
             # Set default start date to 30 days ago if not provided
-            self.start_date = datetime.today() - timedelta(days=30)
+            self.start_date = datetime.today() - timedelta(days=60)
         else:
             self.start_date = start_date
 

@@ -1,4 +1,4 @@
-from crewai import Agent
+from crewai import Agent, Task
 from langchain_openai import ChatOpenAI
 from textwrap import dedent
 from src.Agents.base_agent import BaseAgent
@@ -14,6 +14,16 @@ gpt_model = ChatOpenAI(
 )
 
 class MACDAnalysisAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(
+            role='MACD Trading Advisor',
+            goal="""Interpret MACD signals and provide actionable insights on market trends. 
+            Help traders identify potential bullish or bearish movements and offer advice 
+            on whether to buy, sell, or hold a stock.""",
+            backstory="""As an expert in technical analysis, this agent specializes in MACD interpretation. 
+            It uses its deep knowledge of stock market trends to assist traders in making informed decisions 
+            based on the MACD signals."""
+        )
     def macd_trading_advisor(self):
         return Agent(
             llm=gpt_model,
@@ -36,23 +46,34 @@ class MACDAnalysisAgent(BaseAgent):
         )
 
     def macd_analysis(self, agent, macd_data):
-        description = dedent(f"""
-            Analyze the provided MACD data, which includes the MACD Line, Signal Line, 
-            and MACD Histogram. Based on these indicators, assess whether the stock 
-            is showing bullish, bearish, or neutral signals. Additionally, provide 
-            trading recommendations based on the MACD crossover or divergence.
+        """
+        A new task to handle the MACD analysis by the financial analyst agent.
 
-            Your final answer MUST be a comprehensive report discussing whether the 
-            stock is in a bullish or bearish phase and provide buy, sell, or hold recommendations.
+        Args:
+            agent (object): The agent responsible for analyzing MACD data.
+            macd_data (pd.DataFrame): The calculated MACD and Signal Line data.
 
-            MACD Data:
-            - MACD Line: {macd_data['MACD Line'].iloc[-1]}
-            - Signal Line: {macd_data['Signal Line'].iloc[-1]}
-            - MACD Histogram: {macd_data['MACD Histogram'].iloc[-1]}
-        """)
+        Returns:
+            Task: A CrewAI task for the agent to analyze the MACD report.
+        """
+        # Generate a descriptive report of the MACD analysis
+        report = "MACD Analysis Report:\n"
+        report += macd_data.to_string(index=False)
 
+        # Create the task for the agent to analyze the MACD report
         return Task(
-            description=description,
+            description=dedent(f"""
+                Analyze the following MACD data for the selected stock.
+                Focus on identifying bullish or bearish crossovers and
+                use this information to suggest potential buy/sell signals.
+                The MACD data is as follows:
+                {report}
+
+                Your final answer MUST include an interpretation of the MACD and Signal Line
+                crossovers, highlighting potential trade opportunities.
+                Use the most recent stock data available.
+            """),
             agent=agent,
-            expected_output="A report analyzing MACD signals with trading recommendations."
+            expected_output="A comprehensive analysis of the MACD and Signal Line, including trade signals and interpretation."
         )
+
