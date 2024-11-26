@@ -39,6 +39,9 @@ class RSIIndicator:
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
 
+        # Flatten RSI to ensure it is 1-dimensional
+        rsi = rsi.values.flatten()
+
         # Return RSI as a DataFrame with the same index
         result = pd.DataFrame({'RSI': rsi}, index=data.index)
 

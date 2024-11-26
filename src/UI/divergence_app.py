@@ -19,7 +19,7 @@ from src.Agents.Analysis.stock_analysis_agents import StockAnalysisAgents
 from src.Agents.Analysis.stock_analysis_tasks import StockAnalysisTasks
 from src.Agents.divergence_agents.divergence_agent import DivergenceAnalysisAgents, DivergenceAnalysisTasks  # Updated import
 from src.Data_Retrieval.data_fetcher import DataFetcher
-from src.Indicators.rsi import RSIIndicator
+from src.Indicators.rsi_divergence import RSIIndicator
 from src.Indicators.macd_indicator import MACDIndicator
 from dotenv import load_dotenv
 load_dotenv()
