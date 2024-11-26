@@ -1,433 +1,256 @@
-import backtrader as bt
-import yfinance as yf
+import os
+import re
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
-import os
+from sklearn.metrics import mean_absolute_error
 from crewai import Crew
-import sys
-
-# Load environment variables
-load_dotenv()
-
-# Insert the project directory to sys.path to import custom modules
-# Adjust the path as necessary based on your project structure
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
-# Import custom modules
 from src.Agents.Analysis.stock_analysis_agents import StockAnalysisAgents
 from src.Agents.Analysis.stock_analysis_tasks import StockAnalysisTasks
 from src.Agents.divergence_agents.divergence_agent import DivergenceAnalysisAgents, DivergenceAnalysisTasks
 from src.Data_Retrieval.data_fetcher import DataFetcher
 from src.Indicators.rsi_divergence import RSIIndicator
 from src.Indicators.macd_indicator import MACDIndicator
-from detect_divergence import DivergenceDetector  # Ensure this path is correct
+from src.Indicators.detect_divergence import DivergenceDetector
 
-# ===========================
-# Divergence Detector Class
-# ===========================
-# (Already provided in detect_divergence.py)
-# Ensure that detect_divergence.py is correctly placed and accessible
+# Load environment variables
+load_dotenv()
 
-# =====================================
-# CrewAI-based Divergence Strategy
-# =====================================
-class DivergenceCrewAIStrategy(bt.Strategy):
-    params = dict(
-        company='AAPL',
-        indicator='MACD',  # Options: 'MACD' or 'RSI'
-        data_df=None,
-        printlog=True,
-    )
+class FinancialCrew:
+    def __init__(self, company, indicator_name):
+        self.company = company
+        self.indicator_name = indicator_name
 
-    def __init__(self):
-        self.dataclose = self.datas[0].close
-        self.order = None
-        self.company = self.params.company
-        self.indicator = self.params.indicator
-
-        # Access the DataFrame passed via parameters
-        data_df = self.params.data_df
-
-        # Initialize Agents and Tasks
+    def run(self):
+        # Initialize agents and tasks
+        agents = StockAnalysisAgents()
         divergence_agents = DivergenceAnalysisAgents()
+        tasks = StockAnalysisTasks()
         divergence_tasks = DivergenceAnalysisTasks()
 
-        # Calculate Indicator Values
-        if self.indicator == 'MACD':
-            self.indicator_data = MACDIndicator().calculate(data_df)
-        elif self.indicator == 'RSI':
-            self.indicator_data = RSIIndicator().calculate(data_df)
-        else:
-            raise ValueError("Indicator must be 'MACD' or 'RSI'")
+        # Initialize the divergence trading advisor agent
+        divergence_agent = divergence_agents.divergence_trading_advisor()
 
-        # Initialize CrewAI Agent and Task
-        self.divergence_agent = divergence_agents.divergence_trading_advisor()
-        self.divergence_task = divergence_tasks.detect_divergence(
-            self.divergence_agent, data_df, self.indicator_data, self.indicator
+        # Fetch stock data
+        data_fetcher = DataFetcher()
+        stock_data = data_fetcher.get_stock_data(self.company)
+
+        # Calculate MACD or RSI data
+        if self.indicator_name == 'MACD':
+            indicator_data = MACDIndicator().calculate(stock_data)
+        elif self.indicator_name == 'RSI':
+            indicator_data = RSIIndicator().calculate(stock_data)
+        else:
+            raise ValueError(f"Unsupported indicator: {self.indicator_name}")
+
+        # Create a divergence detection task
+        divergence_task = divergence_tasks.detect_divergence(
+            divergence_agent, stock_data, indicator_data, self.indicator_name
         )
 
-        # Run CrewAI
+        # Kickoff CrewAI agents and tasks
         crew = Crew(
-            agents=[self.divergence_agent],
-            tasks=[self.divergence_task],
+            agents=[divergence_agent],
+            tasks=[divergence_task],
             verbose=True
         )
-        self.crew_output = crew.kickoff()
 
-        # Parse Divergence Signals
-        self.bullish_dates, self.bearish_dates = self.parse_divergence_signals(self.crew_output)
+        result = crew.kickoff()
+        return result
 
-        # Debug: Print Parsed Divergence Dates
-        print(f"Parsed Bullish Divergence Dates: {self.bullish_dates}")
-        print(f"Parsed Bearish Divergence Dates: {self.bearish_dates}")
+class Backtester:
+    def __init__(self, company, indicator_name):
+        self.company = company
+        self.indicator_name = indicator_name
+        self.data_fetcher = DataFetcher()
 
-    def parse_divergence_signals(self, crew_output):
-        bullish_dates = []
-        bearish_dates = []
+    def fetch_stock_data(self):
+        return self.data_fetcher.get_stock_data(self.company)
 
-        if hasattr(crew_output, 'tasks_output') and crew_output.tasks_output:
-            task_output = crew_output.tasks_output[0]
-            if hasattr(task_output, 'content'):
-                bullish_dates = task_output.content.get('Bullish Divergences', [])
-                bearish_dates = task_output.content.get('Bearish Divergences', [])
-
-        return bullish_dates, bearish_dates
-
-    def next(self):
-        current_date = self.datas[0].datetime.date(0)
-        close_price = self.dataclose[0]
-
-        # Debug: Print Current Date and Close Price
-        print(f"{current_date} Close Price: {close_price}")
-
-        if pd.isna(close_price):
-            self.log(f'Close price is NaN on {current_date}')
-            return
-
-        # Execute Buy Order on Bullish Divergence
-        if str(current_date) in self.bullish_dates and not self.position:
-            self.order = self.buy()
-            if self.params.printlog:
-                self.log(f'BUY CREATE, {close_price:.2f}')
-
-        # Execute Sell Order on Bearish Divergence
-        elif str(current_date) in self.bearish_dates and self.position:
-            self.order = self.sell()
-            if self.params.printlog:
-                self.log(f'SELL CREATE, {close_price:.2f}')
-
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{dt.isoformat()} {txt}')
-
-    def notify_order(self, order):
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(f'BUY EXECUTED, Price: {order.executed.price:.2f}')
-            elif order.issell():
-                self.log(f'SELL EXECUTED, Price: {order.executed.price:.2f}')
-        self.order = None
-
-    def notify_trade(self, trade):
-        if trade.isclosed:
-            self.log(f'OPERATION PROFIT, GROSS {trade.pnl:.2f}, NET {trade.pnlcomm:.2f}')
-
-# ====================================
-# Non-CrewAI Divergence Strategy
-# ====================================
-class DivergenceStrategy(bt.Strategy):
-    params = dict(
-        data_df=None,
-        indicator='MACD',  # Options: 'MACD' or 'RSI'
-        printlog=True,
-    )
-
-    def __init__(self):
-        self.dataclose = self.datas[0].close
-        self.order = None
-
-        # Access the DataFrame passed via parameters
-        data_df = self.params.data_df
-
-        # Calculate Indicator Values
-        if self.params.indicator == 'MACD':
-            self.indicator_data = MACDIndicator().calculate(data_df)
-        elif self.params.indicator == 'RSI':
-            self.indicator_data = RSIIndicator().calculate(data_df)
+    def calculate_indicator(self, stock_data):
+        if self.indicator_name == 'RSI':
+            indicator = RSIIndicator()
+        elif self.indicator_name == 'MACD':
+            indicator = MACDIndicator()
         else:
-            raise ValueError("Indicator must be 'MACD' or 'RSI'")
+            raise ValueError(f"Unsupported indicator: {self.indicator_name}")
+        return indicator.calculate(stock_data)
 
-        # Initialize Divergence Detector
-        detector = DivergenceDetector(data_df, self.indicator_data, self.params.indicator)
-        self.bullish_dates = detector.detect_bullish_divergence()
-        self.bearish_dates = detector.detect_bearish_divergence()
+    def run_crewai_system(self, stock_data, indicator_data):
+        financial_crew = FinancialCrew(self.company, self.indicator_name)
+        crew_output = financial_crew.run()
 
-        # Debug: Print Detected Divergence Dates
-        print(f"Detected Bullish Divergence Dates: {self.bullish_dates}")
-        print(f"Detected Bearish Divergence Dates: {self.bearish_dates}")
+        # Debug: Inspect CrewOutput structure
+        print("Inspecting CrewOutput structure...")
+        print(crew_output)
 
-    def next(self):
-        current_date = self.datas[0].datetime.date(0)
-        close_price = self.dataclose[0]
+        # Extract divergence signals from CrewOutput
+        bullish_divergence_dates, bearish_divergence_dates = self.extract_divergence_signals(crew_output)
 
-        # Debug: Print Current Date and Close Price
-        print(f"{current_date} Close Price: {close_price}")
+        return bullish_divergence_dates, bearish_divergence_dates
 
-        if pd.isna(close_price):
-            self.log(f'Close price is NaN on {current_date}')
-            return
+    def extract_divergence_signals(self, crew_output):
+        """
+        Extracts bullish and bearish divergence dates from CrewOutput.
+        Parses the raw text to find dates mentioned in the narrative.
+        """
+        bullish_divergence_dates = []
+        bearish_divergence_dates = []
 
-        # Execute Buy Order on Bullish Divergence
-        if str(current_date) in self.bullish_dates and not self.position:
-            self.order = self.buy()
-            if self.params.printlog:
-                self.log(f'BUY CREATE, {close_price:.2f}')
+        try:
+            # Access the raw text from CrewOutput
+            if hasattr(crew_output, 'tasks_output') and len(crew_output.tasks_output) > 0:
+                task_output = crew_output.tasks_output[0]
 
-        # Execute Sell Order on Bearish Divergence
-        elif str(current_date) in self.bearish_dates and self.position:
-            self.order = self.sell()
-            if self.params.printlog:
-                self.log(f'SELL CREATE, {close_price:.2f}')
+                if hasattr(task_output, 'raw'):
+                    raw_text = task_output.raw
+                    print(f"Raw CrewOutput Text:\n{raw_text}\n")
 
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{dt.isoformat()} {txt}')
+                    # Use regex to extract dates from the raw text
+                    bullish_pattern = r'Bullish Divergences?:\s*([\d-]+\s*\d{2}:\d{2}:\d{2}(?:,\s*[\d-]+\s*\d{2}:\d{2}:\d{2})*)'
+                    bearish_pattern = r'Bearish Divergences?:\s*([\d-]+\s*\d{2}:\d{2}:\d{2}(?:,\s*[\d-]+\s*\d{2}:\d{2}:\d{2})*)'
 
-    def notify_order(self, order):
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(f'BUY EXECUTED, Price: {order.executed.price:.2f}')
-            elif order.issell():
-                self.log(f'SELL EXECUTED, Price: {order.executed.price:.2f}')
-        self.order = None
+                    bullish_match = re.search(bullish_pattern, raw_text, re.IGNORECASE)
+                    bearish_match = re.search(bearish_pattern, raw_text, re.IGNORECASE)
 
-    def notify_trade(self, trade):
-        if trade.isclosed:
-            self.log(f'OPERATION PROFIT, GROSS {trade.pnl:.2f}, NET {trade.pnlcomm:.2f}')
+                    if bullish_match:
+                        bullish_dates_str = bullish_match.group(1)
+                        bullish_divergence_dates = [
+                            pd.to_datetime(date.strip()) for date in bullish_dates_str.split(',')
+                        ]
+                        print(f"Extracted Bullish Divergence Dates: {bullish_divergence_dates}")
+                    else:
+                        print("No Bullish Divergence dates found in the CrewOutput.")
 
-# ===============================
-# Backtesting Runner Function
-# ===============================
-def run_strategy(strategy_class, strategy_name, data_df, company=None, indicator='MACD'):
-    # Preprocess DataFrame
-    try:
-        # Print original columns
-        print("\nOriginal DataFrame Columns:")
-        print(data_df.columns)
+                    if bearish_match:
+                        bearish_dates_str = bearish_match.group(1)
+                        bearish_divergence_dates = [
+                            pd.to_datetime(date.strip()) for date in bearish_dates_str.split(',')
+                        ]
+                        print(f"Extracted Bearish Divergence Dates: {bearish_divergence_dates}")
+                    else:
+                        print("No Bearish Divergence dates found in the CrewOutput.")
+                else:
+                    print("TaskOutput does not have a 'raw' attribute.")
+            else:
+                print("No task output found in CrewOutput.")
+        except Exception as e:
+            print(f"Error extracting divergence signals: {e}")
 
-        # 1. Flatten MultiIndex columns if present
-        if isinstance(data_df.columns, pd.MultiIndex):
-            data_df.columns = ['_'.join(col).strip() for col in data_df.columns.values]
-            print("Flattened MultiIndex columns.")
+        return bullish_divergence_dates, bearish_divergence_dates
 
-        # 2. Standardize column names to title case and remove ticker suffix
-        data_df.columns = [str(col).strip().title() for col in data_df.columns]
-        print("Standardized column names to title case.")
+    def run_non_crewai_system(self, stock_data, indicator_data):
+        detector = DivergenceDetector(stock_data, indicator_data, self.indicator_name)
+        bullish_signals = detector.detect_bullish_divergence()
+        bearish_signals = detector.detect_bearish_divergence()
+        return bullish_signals, bearish_signals
 
-        # 3. Remove ticker suffix (e.g., '_AAPL') from column names
-        data_df.columns = [col.split('_')[0] if '_' in col else col for col in data_df.columns]
-        print("Removed ticker suffix from column names.")
+    def simulate_trades(self, stock_data, bullish_signals, bearish_signals):
+        """
+        Simulate trades based on divergence signals.
+        Buy on bullish divergence, sell on bearish divergence.
+        """
+        position = 0  # 0: no position, 1: long
+        trades = []
+        for date in stock_data.index:
+            if date in bullish_signals and position == 0:
+                # Buy signal
+                price = stock_data.loc[date, 'Close']
+                trades.append({'Date': date, 'Type': 'Buy', 'Price': price})
+                position = 1
+            elif date in bearish_signals and position == 1:
+                # Sell signal
+                price = stock_data.loc[date, 'Close']
+                trades.append({'Date': date, 'Type': 'Sell', 'Price': price})
+                position = 0
+        # Close any open position at the end
+        if position == 1:
+            price = stock_data.iloc[-1]['Close']
+            trades.append({'Date': stock_data.index[-1], 'Type': 'Sell', 'Price': price})
+        return trades
 
-        # 4. If 'Adj Close' exists, use it as 'Close'
-        if 'Adj Close' in data_df.columns:
-            data_df['Close'] = data_df['Adj Close']
-            print("Replaced 'Close' with 'Adj Close'.")
-        elif 'Close' not in data_df.columns:
-            raise ValueError("Missing 'Close' column.")
+    def calculate_returns(self, trades, stock_data):
+        """
+        Calculate cumulative returns based on executed trades.
+        """
+        returns = []
+        buy_price = None
+        for trade in trades:
+            if trade['Type'] == 'Buy':
+                buy_price = trade['Price']
+            elif trade['Type'] == 'Sell' and buy_price is not None:
+                sell_price = trade['Price']
+                ret = (sell_price - buy_price) / buy_price
+                returns.append(ret)
+                buy_price = None
+        cumulative_return = np.prod([1 + r for r in returns]) - 1 if returns else 0
+        return cumulative_return, returns
+
+    def backtest_crewai(self, stock_data, indicator_data):
+        print("\nRunning CrewAI backtest...")
+        bullish, bearish = self.run_crewai_system(stock_data, indicator_data)
+        print(f"CrewAI Bullish Signals: {bullish}")
+        print(f"CrewAI Bearish Signals: {bearish}")
+
+        trades = self.simulate_trades(stock_data, bullish, bearish)
+        print(f"CrewAI Trades: {trades}")
+
+        cumulative_return, returns = self.calculate_returns(trades, stock_data)
+        print(f"CrewAI Cumulative Return: {cumulative_return:.2%}")
+
+        return cumulative_return, returns
+
+    def backtest_non_crewai(self, stock_data, indicator_data):
+        print("\nRunning non-CrewAI backtest...")
+        bullish, bearish = self.run_non_crewai_system(stock_data, indicator_data)
+        print(f"Non-CrewAI Bullish Signals: {bullish}")
+        print(f"Non-CrewAI Bearish Signals: {bearish}")
+
+        trades = self.simulate_trades(stock_data, bullish, bearish)
+        print(f"Non-CrewAI Trades: {trades}")
+
+        cumulative_return, returns = self.calculate_returns(trades, stock_data)
+        print(f"Non-CrewAI Cumulative Return: {cumulative_return:.2%}")
+
+        return cumulative_return, returns
+
+    def compare_results(self, crewai_result, non_crewai_result):
+        crewai_cum_ret, crewai_returns = crewai_result
+        non_crewai_cum_ret, non_crewai_returns = non_crewai_result
+
+        print("\nComparison Results:")
+        print("-------------------")
+        print(f"CrewAI Cumulative Return: {crewai_cum_ret:.2%}")
+        print(f"Non-CrewAI Cumulative Return: {non_crewai_cum_ret:.2%}")
+
+        if crewai_cum_ret > non_crewai_cum_ret:
+            print("CrewAI system outperformed the non-CrewAI system.")
+        elif crewai_cum_ret < non_crewai_cum_ret:
+            print("Non-CrewAI system outperformed the CrewAI system.")
         else:
-            print("'Close' column is present.")
+            print("Both systems performed equally.")
 
-        # 5. Retain only required columns
-        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-        missing_cols = [col for col in required_columns if col not in data_df.columns]
-        if missing_cols:
-            raise ValueError(f"Missing columns in data_df: {missing_cols}")
-        data_df = data_df[required_columns]
-        print(f"Retained required columns: {required_columns}")
+    def run_backtest(self):
+        stock_data = self.fetch_stock_data()
+        indicator_data = self.calculate_indicator(stock_data)
 
-        # 6. Reset index to make 'Date' a column
-        if 'Date' in data_df.index.names:
-            data_df = data_df.reset_index()
-            print("Reset index to make 'Date' a column.")
+        # Backtest CrewAI system
+        crewai_result = self.backtest_crewai(stock_data, indicator_data)
 
-        # 7. Rename 'Date' to 'datetime'
-        if 'Date' in data_df.columns:
-            data_df.rename(columns={'Date': 'datetime'}, inplace=True)
-            print("Renamed 'Date' to 'datetime'.")
-        elif 'Datetime' in data_df.columns:
-            data_df.rename(columns={'Datetime': 'datetime'}, inplace=True)
-            print("Renamed 'Datetime' to 'datetime'.")
-        else:
-            raise ValueError("Date column not found in data_df. It should be 'Date' or 'Datetime'.")
+        # Backtest non-CrewAI system
+        non_crewai_result = self.backtest_non_crewai(stock_data, indicator_data)
 
-        # 8. Convert 'datetime' to datetime objects
-        data_df['datetime'] = pd.to_datetime(data_df['datetime'])
-        print("Converted 'datetime' column to datetime objects.")
+        # Compare results
+        self.compare_results(crewai_result, non_crewai_result)
 
-        # 9. Drop rows with NaN in 'Close'
-        if data_df['Close'].isna().any():
-            print("Warning: 'Close' column contains NaN values. Dropping these rows.")
-            data_df = data_df.dropna(subset=['Close'])
+if __name__ == "__main__":
+    print("### Divergence Trading Backtest ###")
+    company = input("Enter the company ticker symbol (e.g., AAPL): ").upper()
+    indicator_name = input("Enter the indicator for divergence detection (MACD/RSI): ").upper()
 
-        # 10. Debug: Check DataFrame Structure
-        print("\nDataFrame Columns and Types:")
-        print(data_df.dtypes)
-        print("\nFirst 5 Rows of DataFrame:")
-        print(data_df.head())
+    if indicator_name not in ['MACD', 'RSI']:
+        print("Invalid indicator. Please choose either 'MACD' or 'RSI'.")
+        exit(1)
 
-    except Exception as e:
-        print(f"Error during data preprocessing: {e}")
-        return
-
-    # Initialize Cerebro Engine
-    cerebro = bt.Cerebro()
-    cerebro.broker.setcash(100000.0)  # Starting with $100,000
-    cerebro.broker.setcommission(commission=0.001)  # 0.1% commission
-
-    # Create Data Feed for Backtrader
-    try:
-        data = bt.feeds.PandasData(
-            dataname=data_df,
-            datetime='datetime',
-            open='Open',
-            high='High',
-            low='Low',
-            close='Close',
-            volume='Volume',
-            openinterest=-1
-        )
-        cerebro.adddata(data)
-        print("Added data feed to Cerebro.")
-    except Exception as e:
-        print(f"Error adding data feed to Cerebro: {e}")
-        return
-
-    # Add Strategy to Cerebro
-    try:
-        # Only pass 'company' if the strategy expects it
-        if company and hasattr(strategy_class, 'params') and 'company' in strategy_class.params:
-            cerebro.addstrategy(strategy_class, company=company, data_df=data_df, indicator=indicator, printlog=True)
-        else:
-            cerebro.addstrategy(strategy_class, data_df=data_df, indicator=indicator, printlog=True)
-        print(f"Added strategy '{strategy_name}' to Cerebro.")
-    except Exception as e:
-        print(f"Error adding strategy to Cerebro: {e}")
-        return
-
-    # Add Analyzers
-    try:
-        cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe')
-        cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
-        cerebro.addanalyzer(bt.analyzers.TimeReturn, timeframe=bt.TimeFrame.NoTimeFrame, _name='timereturn')
-        print("Added analyzers to Cerebro.")
-    except Exception as e:
-        print(f"Error adding analyzers to Cerebro: {e}")
-        return
-
-    # Run Backtest
-    print(f'\nRunning {strategy_name}...')
-    try:
-        results = cerebro.run()
-        print(f'Final Portfolio Value: {cerebro.broker.getvalue():.2f}')
-    except Exception as e:
-        print(f"Error during Cerebro run: {e}")
-        return
-
-    # Retrieve Analyzers
-    try:
-        strat = results[0]
-        sharpe = strat.analyzers.sharpe.get_analysis()
-        drawdown = strat.analyzers.drawdown.get_analysis()
-        timereturn = strat.analyzers.timereturn.get_analysis()
-    except Exception as e:
-        print(f"Error retrieving analyzers: {e}")
-        return
-
-    # Calculate Returns
-    strategy_returns = pd.Series(timereturn)
-    cumulative_return = (strategy_returns + 1.0).prod() - 1.0
-    start_date = data_df['datetime'].iloc[0]
-    end_date = data_df['datetime'].iloc[-1]
-    num_years = (end_date - start_date).days / 365.25
-    annual_return = (1 + cumulative_return) ** (1 / num_years) - 1 if num_years else 0.0
-
-    # Print Performance Metrics
-    print(f'\n{strategy_name} Performance Metrics:')
-    print('----------------------------------------')
-    print(f"Sharpe Ratio: {sharpe.get('sharperatio', 'N/A')}")
-    print(f"Total Return: {cumulative_return * 100:.2f}%")
-    print(f"Annual Return: {annual_return * 100:.2f}%")
-    print(f"Max Drawdown: {drawdown.max.drawdown:.2f}%")
-
-    # Optional: Plot the Strategy Results
-    # cerebro.plot(style='candlestick')
-
-    # Return Metrics
-    return {
-        'strategy_name': strategy_name,
-        'sharpe_ratio': sharpe.get('sharperatio', 'N/A'),
-        'total_return': cumulative_return * 100,
-        'annual_return': annual_return * 100,
-        'max_drawdown': drawdown.max.drawdown,
-    }
-
-# ===============================
-# Main Backtesting Execution
-# ===============================
-if __name__ == '__main__':
-    company = 'AAPL'
-    data_df = yf.download(company, start='2020-01-01', end='2024-10-30')
-
-    if data_df.empty:
-        print(f"No price data found for {company}")
-        sys.exit()
-
-    # Run CrewAI-based Divergence Strategy
-    try:
-        metrics_crewai = run_strategy(
-            DivergenceCrewAIStrategy,
-            'Divergence CrewAI Strategy',
-            data_df.copy(),
-            company=company,
-            indicator='MACD'  # Change to 'RSI' if needed
-        )
-    except Exception as e:
-        print(f"Error running Divergence CrewAI Strategy: {e}")
-
-    # Run Non-CrewAI Divergence Strategy
-    try:
-        metrics_noncrewai = run_strategy(
-            DivergenceStrategy,
-            'Divergence Non-CrewAI Strategy',
-            data_df.copy(),
-            indicator='MACD'  # Change to 'RSI' if needed
-        )
-    except Exception as e:
-        print(f"Error running Divergence Non-CrewAI Strategy: {e}")
-
-    # Compare the performance metrics
-    print("\nComparison of Strategies:")
-    print("-------------------------")
-    metrics = ['strategy_name', 'sharpe_ratio', 'total_return', 'annual_return', 'max_drawdown']
-    comparison_data = []
-    if 'metrics_crewai' in locals() and metrics_crewai:
-        comparison_data.append([
-            metrics_crewai['strategy_name'],
-            metrics_crewai['sharpe_ratio'],
-            metrics_crewai['total_return'],
-            metrics_crewai['annual_return'],
-            metrics_crewai['max_drawdown']
-        ])
-    if 'metrics_noncrewai' in locals() and metrics_noncrewai:
-        comparison_data.append([
-            metrics_noncrewai['strategy_name'],
-            metrics_noncrewai['sharpe_ratio'],
-            metrics_noncrewai['total_return'],
-            metrics_noncrewai['annual_return'],
-            metrics_noncrewai['max_drawdown']
-        ])
-    if comparison_data:
-        df_metrics = pd.DataFrame(comparison_data, columns=metrics)
-        print(df_metrics.to_string(index=False))
-    else:
-        print("No metrics to compare.")
+    backtester = Backtester(company, indicator_name)
+    backtester.run_backtest()
