@@ -14,12 +14,12 @@ import crewai_tools as crewai_tools
 
 from src.Helpers.pretty_print_crewai_output import display_crew_output
 
-from src.Agents.Bollinger_agent.bollinger_agent import BollingerAnalysisAgents
-from src.Agents.Analysis.stock_analysis_agents import StockAnalysisAgents
-from src.Agents.Analysis.research_analyst_critic_agent import ResearchAnalysisCriticAgent
-from src.Agents.Analysis.research_analyst_agent import ResearchAnalystAgent
 from src.Indicators.bollinger import BollingerBands  # Import BollingerBands class
 from src.Data_Retrieval.data_fetcher import DataFetcher  # Import DataFetcher class
+from src.Agents.Research.research_analyst_critic_agent import ResearchAnalysisCriticAgent
+from src.Agents.Research.research_analyst_agent import ResearchAnalystAgent
+from src.Agents.Research.bollinger_analysis_agent import BollingerAnalysisAgent
+from src.Agents.Research.bollinger_buy_sell_agent import BollingerBuySellAgent
 
 
 # Initialize logger
@@ -39,43 +39,43 @@ gpt_4o_high_tokens = lang_oai.ChatOpenAI(
 
 
 class FinancialCrew:
-    def __init__(self, company):
-        self.company = company
-        #self.stock_data = stock_data
+    def __init__(self, ticker):
+        self.ticker = ticker
+        self.stock_data = DataFetcher().get_stock_data(ticker)
 
     def run(self):
         # Initialize agents
-        stock_analysis_agents = StockAnalysisAgents()
-        bollinger_agents = BollingerAnalysisAgents()
+        #stock_analysis_agents = StockAnalysisAgents()
         
+        # Bollinger Bands Data Calculation
+        bollinger_data = BollingerBands(self.stock_data)
+        bollinger_bands_data = bollinger_data.calculate_bands()
+
+
         # Initialize agents
-        research_analyst_agent = ResearchAnalystAgent(llm=gpt_4o_high_tokens)
+        research_analyst_agent = ResearchAnalystAgent(ticker=self.ticker, llm=gpt_4o_high_tokens)
         research_analyst_critic_agent = ResearchAnalysisCriticAgent(llm=gpt_4o_high_tokens)
-        #financial_analyst_agent = stock_analysis_agents.financial_analyst()
-        #investment_advisor_agent = stock_analysis_agents.investment_advisor()
-        #bollinger_agent = bollinger_agents.bollinger_bands_investment_advisor()
+        bollinger_investment_advisor_agent = BollingerAnalysisAgent(llm=gpt_4o_high_tokens)
+        bollinger_buy_sell_agent = BollingerBuySellAgent(ticker=self.ticker, llm=gpt_4o_high_tokens)
+
+        agents = [research_analyst_agent, research_analyst_critic_agent, bollinger_investment_advisor_agent, bollinger_buy_sell_agent]
               
  
-        # Bollinger Bands Calculation
-        bollinger = BollingerBands(self.stock_data)
-        bollinger_bands = bollinger.calculate_bands()
-
-        # Create tasks for Bollinger Bands analysis
 
 
-        #bollinger_task1_research_analyst = bollinger_agents.bollinger_analysis(research_analyst_agent, bollinger_bands)
-        #bollinger_task2_financial_analyst = bollinger_agents.bollinger_analysis(financial_analyst_agent, bollinger_bands)
-        #bollinger_task3_investment_advisor = bollinger_agents.bollinger_analysis(investment_advisor_agent, bollinger_bands)
-        #bollinger_task4_bollinger = bollinger_agents.bollinger_analysis(bollinger_agent, bollinger_bands)
-        
+        # Create tasks for Bollinger Bands analysis        
         get_news = research_analyst_agent.get_scenarios_from_news()        
-        critique_research_analyst = research_analyst_agent.critique_research_analyst_agent()
+        critique_research_analyst = research_analyst_critic_agent.critique_research_analyst_agent()
         revise_report = research_analyst_agent.revise_report()
+        analyze_bollinger_data = bollinger_investment_advisor_agent.analyse_bollinger_data(bollinger_bands_data)
+        buy_sell_decision = bollinger_buy_sell_agent.buy_sell_decision()
 
         tasks_baseline=[
             get_news,
             critique_research_analyst,
-            revise_report
+            revise_report,
+            analyze_bollinger_data,
+            buy_sell_decision
              ]
 
 
@@ -84,17 +84,15 @@ class FinancialCrew:
             critique_research_analyst,
             revise_report,
             critique_research_analyst,
-            revise_report
-
+            revise_report,
+            analyze_bollinger_data,
+            buy_sell_decision
             ]
        
 
         # Kickoff CrewAI agents and tasks
         crew = crewai.Crew(
-            agents=[
-                research_analyst_agent,
-                research_analyst_critic_agent,
-            ],
+            agents=agents,
             tasks=tasks_baseline,
             verbose=True,
             process=crewai.Process.sequential
@@ -107,9 +105,9 @@ if __name__ == "__main__":
     print("## Research Interation Analysis")
     print('-------------------------------')
 
-    company='aapl'    
+    ticker='aapl'    
   
-    financial_crew = FinancialCrew(company=company)
+    financial_crew = FinancialCrew(ticker=ticker)
     logging.info("Financial crew initialized successfully")
 
     try:
