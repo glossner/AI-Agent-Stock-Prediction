@@ -18,17 +18,21 @@ class DivergenceDetector:
     def detect_bullish_divergence(self) -> list:
         """
         Detect bullish divergence between price and the indicator.
-        
+
         Returns:
             List of dates where bullish divergence occurs.
         """
         bullish_signals = []
         # Compare lows: Price forms lower lows, but the indicator forms higher lows
-        for i in range(1, len(self.price_data)):
-            if self.price_data['Close'].iloc[i] < self.price_data['Close'].iloc[i-1] and \
-               self.indicator_data[self.indicator_name].iloc[i] > self.indicator_data[self.indicator_name].iloc[i-1]:
-                bullish_signals.append(self.price_data.index[i])
+        close_prices = self.price_data['Close'].values  # Ensure it's an array of scalars
+        indicator_values = self.indicator_data[self.indicator_name].values  # Ensure it's an array of scalars
+
+        for i in range(1, len(close_prices)):
+            if close_prices[i] < close_prices[i - 1] and indicator_values[i] > indicator_values[i - 1]:
+                bullish_signals.append(self.price_data.index[i])  # Use the index for the date
+
         return bullish_signals
+
 
     def detect_bearish_divergence(self) -> list:
         """
@@ -38,9 +42,11 @@ class DivergenceDetector:
             List of dates where bearish divergence occurs.
         """
         bearish_signals = []
-        # Compare highs: Price forms higher highs, but the indicator forms lower highs
-        for i in range(1, len(self.price_data)):
-            if self.price_data['Close'].iloc[i] > self.price_data['Close'].iloc[i-1] and \
-               self.indicator_data[self.indicator_name].iloc[i] < self.indicator_data[self.indicator_name].iloc[i-1]:
-                bearish_signals.append(self.price_data.index[i])
+        close_prices = self.price_data['Close'].values
+        indicator_values = self.indicator_data[self.indicator_name].values
+
+        for i in range(1, len(close_prices)):
+            if close_prices[i] > close_prices[i - 1] and indicator_values[i] < indicator_values[i - 1]:
+                bearish_signals.append(self.price_data.index[i])  # Use the index for the date
+
         return bearish_signals

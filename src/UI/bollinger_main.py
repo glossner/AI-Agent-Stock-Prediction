@@ -32,10 +32,10 @@ class FinancialCrew:
         bollinger_bands = bollinger.calculate_bands()
 
         # Create tasks for Bollinger Bands analysis
-        bollinger_task1 = bollinger_agents.bollinger_analysis(research_analyst_agent, bollinger_bands)
-        bollinger_task2 = bollinger_agents.bollinger_analysis(financial_analyst_agent, bollinger_bands)
-        bollinger_task3 = bollinger_agents.bollinger_analysis(investment_advisor_agent, bollinger_bands)
-        bollinger_task4 = bollinger_agents.bollinger_analysis(bollinger_agent, bollinger_bands)
+        analyze_bollinger_research = bollinger_agents.bollinger_analysis(research_analyst_agent, bollinger_bands)
+        analyze_bollinger_financial = bollinger_agents.bollinger_analysis(financial_analyst_agent, bollinger_bands)
+        analyze_bollinger_investment = bollinger_agents.bollinger_analysis(investment_advisor_agent, bollinger_bands)
+        analyze_bollinger_overall = bollinger_agents.bollinger_analysis(bollinger_agent, bollinger_bands)
 
         # Kickoff CrewAI agents and tasks
         crew = Crew(
@@ -46,10 +46,10 @@ class FinancialCrew:
                 bollinger_agent
             ],
             tasks=[
-                bollinger_task1,
-                bollinger_task2,
-                bollinger_task3,
-                bollinger_task4  # Include the Bollinger Bands analysis task
+                analyze_bollinger_research,
+                analyze_bollinger_financial,
+                analyze_bollinger_investment,
+                analyze_bollinger_overall  # Include the Bollinger Bands analysis task
             ],
             verbose=True
         )

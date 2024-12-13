@@ -1,73 +1,92 @@
-######################################
-# This code comes from the MACD Trading System project
-# And is licensed under MIT
-######################################
-#
-# The following keys must be defined in the environment shell
-# OPENAI_API_KEY=sk-
-# SEC_API_API_KEY=
-# SERPER_API_KEY
-#
 import os
 import sys
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from crewai import Crew
 from textwrap import dedent
-
-from src.Agents.MACD.macd_analysis_agent import MACDAnalysisAgent
-from src.Indicators.macd import MACDIndicator
-from src.Data_Retrieval.data_fetcher import DataFetcher
-
 from dotenv import load_dotenv
+
+# Import necessary classes from your project
+from src.Agents.Analysis.stock_analysis_agents import StockAnalysisAgents  # Agents definition
+from src.Agents.Analysis.stock_analysis_tasks import StockAnalysisTasks  # Tasks for CrewAI
+
+from src.Indicators.macd import MACDIndicator  # MACD indicator class
+from src.Agents.MACD.macd_analysis_agent import MACDAnalysisAgent  # MACD analysis agent
+from src.Data_Retrieval.data_fetcher import DataFetcher  # For fetching stock data
+
+# Load environment variables
 load_dotenv()
 
 class FinancialCrew:
-    def __init__(self, company):
+    def __init__(self, company, stock_data):
         self.company = company
+        self.stock_data = stock_data
 
     def run(self):
-        # Initialize MACD analysis agent
-        macd_analysis_agent = MACDAnalysisAgent()
-        macd_agent = macd_analysis_agent.macd_trading_advisor()
+        # Initialize agents and tasks
+        agents = StockAnalysisAgents()
+        tasks = StockAnalysisTasks()
 
-        # Fetch stock data using DataFetcher
-        data_fetcher = DataFetcher()
-        stock_data = data_fetcher.get_stock_data(self.company)
+        # Initialize agents
+        research_analyst_agent = agents.research_analyst()
+        financial_analyst_agent = agents.financial_analyst()
+        investment_advisor_agent = agents.investment_advisor()
+        
+        # Initialize MACD Analysis Agent
+        macd_agent = MACDAnalysisAgent().macd_trading_advisor()
 
-        # Calculate MACD using the MACDIndicator
-        macd_indicator = MACDIndicator()
-        macd_data = macd_indicator.calculate(stock_data)
+        # Create tasks
+        research_task = tasks.research(research_analyst_agent, self.company)
+        financial_task = tasks.financial_analysis(financial_analyst_agent)
+        filings_task = tasks.filings_analysis(financial_analyst_agent)
+        recommend_task = tasks.recommend(investment_advisor_agent)
 
-        # Create a MACD analysis task
-        macd_task = macd_analysis_agent.macd_analysis(macd_agent, macd_data)
+        # MACD Calculation
+        macd = MACDIndicator(self.stock_data)
+        macd_data = macd.calculate_macd()
 
-        # Run the agents and tasks in the Crew
+        # Create a new task for MACD analysis and pass the report to the MACD analysis agent
+        macd_task = MACDAnalysisAgent().macd_analysis(macd_agent, macd_data)
+
+        # Kickoff CrewAI agents and tasks
         crew = Crew(
-            agents=[macd_agent],
-            tasks=[macd_task],
+            agents=[
+                research_analyst_agent,
+                financial_analyst_agent,
+                investment_advisor_agent,
+                macd_agent  # Include MACD agent
+            ],
+            tasks=[
+                macd_task,  # Include the MACD task
+            ],
             verbose=True
         )
 
         result = crew.kickoff()
         return result
 
+
 if __name__ == "__main__":
-    print("## Welcome to MACD Trading System")
+    print("## Welcome to Financial Analysis Crew")
     print('-------------------------------')
 
-    # Prompt user for the company to analyze
-    company = input(
-        dedent("""
-            What is the company you want to analyze?
-        """))
+    # Prompt user for company name
+    company = input(dedent("""
+        What is the company you want to analyze?
+    """))
 
-    # Create FinancialCrew instance and run the analysis
-    financial_crew = FinancialCrew(company)
-    result = financial_crew.run()
+    # Fetch stock data using DataFetcher
+    data_fetcher = DataFetcher()
+    stock_data = data_fetcher.get_stock_data(company)
 
-    print("\n\n########################")
-    print("## Here is the Report")
-    print("########################\n")
-    print(result)
+    if stock_data.empty:
+        print(f"No data found for {company}. Please try again.")
+    else:
+        # Create FinancialCrew instance
+        financial_crew = FinancialCrew(company, stock_data)
+
+        # Run the analysis and display the result
+        result = financial_crew.run()
+
+        print("\n\n########################")
+        print("## Here is the Report")
+        print("########################\n")
+        print(result)

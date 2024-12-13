@@ -31,31 +31,24 @@ class DataFetcher:
         end_date_str = end_date.strftime('%Y-%m-%d')
 
         df = yf.download(symbol, start=start_date_str, end=end_date_str)
+
+        # Rename columns to include the stock ticker
+        df = df.rename(columns=lambda col: f"{col}_{symbol}")
         df.index = pd.to_datetime(df.index)
         return df
 
+
     def get_commodity_data(self, commodity: str, start_date: datetime = None, end_date: datetime = None) -> pd.DataFrame:
-        """
-        Fetches historical commodity data for the given commodity.
-
-        Args:
-            commodity (str): The commodity to fetch data for (e.g., "OIL", "GOLD").
-
-        Returns:
-            pd.DataFrame: A DataFrame containing the historical commodity data.
-        """
-        # Mapping commodity names to Yahoo Finance symbols
         commodity_symbols = {
             "OIL": "CL=F",     # Crude Oil WTI
             "GOLD": "GC=F"     # Gold
         }
-        
+
         if commodity not in commodity_symbols:
             raise ValueError(f"Unsupported commodity: {commodity}")
 
         symbol = commodity_symbols[commodity]
-        
-        # Use provided dates or default to initialization dates
+
         if start_date is None:
             start_date = self.start_date
         if end_date is None:
@@ -65,5 +58,8 @@ class DataFetcher:
         end_date_str = end_date.strftime('%Y-%m-%d')
 
         df = yf.download(symbol, start=start_date_str, end=end_date_str)
+
+        # Ensure columns have a consistent name format
+        df = df.rename(columns=lambda col: f"{col}_{commodity}")
         df.index = pd.to_datetime(df.index)
         return df

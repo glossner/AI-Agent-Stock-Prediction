@@ -43,6 +43,11 @@ class MACDIndicator:
         # MACD histogram: difference between MACD line and Signal line
         macd_histogram = macd_line - signal_line
 
+        # Flatten the arrays to ensure 1D
+        macd_line = macd_line.values.flatten()
+        signal_line = signal_line.values.flatten()
+        macd_histogram = macd_histogram.values.flatten()
+
         # Ensure the result has the same index as the original data
         result = pd.DataFrame({
             'MACD': macd_line,

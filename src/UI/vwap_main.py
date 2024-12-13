@@ -1,6 +1,7 @@
 import os
 import sys
 from textwrap import dedent
+import pandas as pd
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
@@ -21,6 +22,22 @@ class FinancialCrewVWAP:
         # Fetch stock data using DataFetcher
         data_fetcher = DataFetcher()
         stock_data = data_fetcher.get_stock_data(self.company)
+
+        # Flatten MultiIndex columns if present
+        if isinstance(stock_data.columns, pd.MultiIndex):
+            stock_data.columns = [' '.join(col).strip() for col in stock_data.columns.values]
+            # Rename columns to match expected names
+            stock_data = stock_data.rename(columns={
+                'Adj Close AAPL': 'Adj Close',
+                'Close AAPL': 'Close',
+                'High AAPL': 'High',
+                'Low AAPL': 'Low',
+                'Open AAPL': 'Open',
+                'Volume AAPL': 'Volume'
+            })
+        
+        # Debug: Check columns after flattening
+        print("Columns after flattening and renaming:", stock_data.columns.tolist())
 
         # Calculate VWAP using the VWAPIndicator
         vwap_indicator = VWAPIndicator()
