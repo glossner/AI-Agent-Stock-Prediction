@@ -12,9 +12,8 @@ dependencies:
       - backtrader[plotting]
       - crewai
       - crewai-tools
-      - langchaim
+      - langchain
       - langchain-community
-      - langchain-cohere
       - lxml-html-clean
       - newspaper3k
       - openai
