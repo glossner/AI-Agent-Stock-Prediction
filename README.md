@@ -9,10 +9,22 @@ There are two programs that are not yet integrated. From the root directory run:
 ```
 or
 ```sh
-(stocks) jglossner@jglossner:~/GitRepos/AI-Agent-Stock-Prediction$ python -m src.UI.main
+(stocks) jglossner@jglossner:~/GitRepos/AI-Agent-Stock-Prediction$ python -m src.UI.scenario
 ```
 
+Typical scenario prediction output
+![Example Scenario Prediction](pics/scenario_prediction.png "Scenario Prediction")
+
+Typical cost to run the scenario prediction
+![Scenario Prediction Costs](pics/scenario_costs.png "Scenario Prediction Costs")
+
 ## Installation
+```sh
+conda env create -f conda_env.yml
+```
+
+
+## Manual Installation (not recommended)
 
 Install [Anaconda Python](https://www.anaconda.com/download).
 
@@ -38,7 +50,8 @@ Documentation for [CrewAI](https://docs.crewai.com/getting-started/Installing-Cr
 
 ```sh
 conda config --set pip_interop_enabled True
-pip install openai crewai crewai-tools pandas_ta unstructured sec_api
+conda install openai unstructured
+pip install crewai crewai-tools pandas_ta  sec_api
 ```
 
 ## Install faiss
@@ -53,7 +66,8 @@ conda install -c conda-forge faiss-cpu
 
 ## newspaper3k and supporting libraries
 ```sh
-pip install newspaper3k beautifulsoup4 lxml lxml_html_clean
+conda install newspaper3k
+pip install lxml_html_clean
 ```
 
 ## Set Environment Variables
@@ -72,7 +86,7 @@ Note: for Windows use *set* instead of *export*
 ## Set up Selenium and the Chromium webdriver
 
 ```sh
-pip install selenium
+conda install selenium
 ```
 
 Download the [chromedriver](https://googlechromelabs.github.io/chrome-for-testing/#stable) from the stable channel.
@@ -84,6 +98,5 @@ Note that it must match the version of Chrome on your computer. You can check it
 ## Set up back testing 
 
 ```sh
-pip install backtrader
-pip install backtrader[plotting]
+pip install backtrader backtrader[plotting]
 ```
