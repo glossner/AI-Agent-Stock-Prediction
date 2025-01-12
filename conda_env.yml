@@ -5,9 +5,6 @@ channels:
 dependencies:
   - anaconda
   - faiss-cpu
-  - langchaim
-  - langchain-community
-  - langchain-cohere
   - selenium
   - yfinance
   - pip:
@@ -15,6 +12,9 @@ dependencies:
       - backtrader[plotting]
       - crewai
       - crewai-tools
+      - langchaim
+      - langchain-community
+      - langchain-cohere
       - lxml-html-clean
       - newspaper3k
       - openai
