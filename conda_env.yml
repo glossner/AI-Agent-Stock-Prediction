@@ -10,14 +10,16 @@ dependencies:
   - pip:
       - backtrader
       - backtrader[plotting]
-      - crewai
-      - crewai-tools
+      - crewai==0.95.0
+      - crewai-tools==0.25.8
       - langchain
       - langchain-community
       - lxml-html-clean
       - newspaper3k
       - openai
       - pandas-ta
+      - protobuf==5.29.3
+      - pydantic==2.10.5
       - sec-api
-      - unstructured
+      - unstructured      
 prefix: /opt/conda/envs/stocks
