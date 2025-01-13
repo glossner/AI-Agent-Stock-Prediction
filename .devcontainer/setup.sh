@@ -26,4 +26,7 @@ fi
 # Activate the environment
 conda activate stocks
 
+# New installs will have the wrong decryption key by default. So, reinitialize them.
+rm portfolio_*
+
 echo "Setup completed successfully!"
